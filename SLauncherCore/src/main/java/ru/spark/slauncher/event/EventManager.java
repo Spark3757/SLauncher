@@ -54,6 +54,10 @@ public final class EventManager<T extends Event> {
             return Event.Result.DEFAULT;
     }
 
+    private synchronized void removeConsumer(Consumer<T> consumer) {
+        handlers.removeValue(consumer);
+    }
+
     private class WeakListener implements Consumer<T> {
         private final WeakReference<Consumer<T>> ref;
 
@@ -65,7 +69,7 @@ public final class EventManager<T extends Event> {
         public void accept(T t) {
             Consumer<T> listener = ref.get();
             if (listener == null) {
-                handlers.removeValue(this);
+                removeConsumer(this);
             } else {
                 listener.accept(t);
             }
