@@ -9,6 +9,7 @@ import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskResult;
 import ru.spark.slauncher.util.Lang;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -49,7 +50,9 @@ public final class OptiFineInstallTask extends TaskResult<Version> {
 
     @Override
     public void execute() {
-        if ("cpw.mods.modlauncher.Launcher".equals(version.getMainClass()))
+        if (!Arrays.asList("net.minecraft.client.main.Main",
+                "net.minecraft.launchwrapper.Launch")
+                .contains(version.getMainClass()))
             throw new UnsupportedOptiFineInstallationException();
 
         String remoteVersion = remote.getGameVersion() + "_" + remote.getSelfVersion();

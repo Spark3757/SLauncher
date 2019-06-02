@@ -4,6 +4,8 @@ import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.game.VersionLibraryBuilder;
 import ru.spark.slauncher.task.TaskResult;
 
+import static ru.spark.slauncher.download.LibraryAnalyzer.LibraryType.*;
+
 public class MaintainTask extends TaskResult<Version> {
 
     private final Version version;
@@ -26,20 +28,20 @@ public class MaintainTask extends TaskResult<Version> {
         LibraryAnalyzer libraryAnalyzer = LibraryAnalyzer.analyze(version);
         VersionLibraryBuilder builder = new VersionLibraryBuilder(version);
 
-        if (!libraryAnalyzer.hasForge()) {
+        if (!libraryAnalyzer.has(FORGE)) {
             builder.removeTweakClass("forge");
         }
 
         // Installing Forge will override the Minecraft arguments in json, so LiteLoader and OptiFine Tweaker are being re-added.
 
         builder.removeTweakClass("liteloader");
-        if (libraryAnalyzer.hasLiteLoader()) {
+        if (libraryAnalyzer.has(LITELOADER)) {
             builder.addArgument("--tweakClass", "com.mumfrey.liteloader.launch.LiteLoaderTweaker");
         }
 
         builder.removeTweakClass("optifine");
-        if (libraryAnalyzer.hasOptiFine()) {
-            if (!libraryAnalyzer.hasLiteLoader() && !libraryAnalyzer.hasForge()) {
+        if (libraryAnalyzer.has(OPTIFINE)) {
+            if (!libraryAnalyzer.has(LITELOADER) && !libraryAnalyzer.has(FORGE)) {
                 builder.addArgument("--tweakClass", "optifine.OptiFineTweaker");
             } else {
                 // If forge or LiteLoader installed, OptiFine Forge Tweaker is needed.

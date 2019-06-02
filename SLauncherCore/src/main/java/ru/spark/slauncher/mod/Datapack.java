@@ -1,7 +1,6 @@
 package ru.spark.slauncher.mod;
 
 import com.google.gson.JsonParseException;
-import com.google.gson.annotations.SerializedName;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -10,7 +9,6 @@ import javafx.collections.ObservableList;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.JsonUtils;
-import ru.spark.slauncher.util.gson.Validation;
 import ru.spark.slauncher.util.io.CompressingUtils;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.io.Unzipper;
@@ -24,7 +22,6 @@ public class Datapack {
     private static final String DISABLED_EXT = "disabled";
     private final Path path;
     private final ObservableList<Pack> info = FXCollections.observableArrayList();
-    private boolean isMultiple;
 
     public Datapack(Path path) {
         this.path = path;
@@ -180,12 +177,14 @@ public class Datapack {
         Platform.runLater(() -> this.info.setAll(info));
     }
 
+    private boolean isMultiple;
+
     public static class Pack {
+        private Path file;
         private final BooleanProperty active;
         private final String id;
         private final String description;
         private final Datapack datapack;
-        private Path file;
 
         public Pack(Path file, String id, String description, Datapack datapack) {
             this.file = file;
@@ -235,55 +234,6 @@ public class Datapack {
 
         public void setActive(boolean active) {
             this.active.set(active);
-        }
-    }
-
-    private static class PackMcMeta implements Validation {
-
-        @SerializedName("pack")
-        private final PackInfo pack;
-
-        public PackMcMeta() {
-            this(new PackInfo());
-        }
-
-        public PackMcMeta(PackInfo packInfo) {
-            this.pack = packInfo;
-        }
-
-        public PackInfo getPackInfo() {
-            return pack;
-        }
-
-        @Override
-        public void validate() throws JsonParseException {
-            if (pack == null)
-                throw new JsonParseException("pack cannot be null");
-        }
-
-        public static class PackInfo {
-            @SerializedName("pack_format")
-            private final int packFormat;
-
-            @SerializedName("description")
-            private final String description;
-
-            public PackInfo() {
-                this(0, "");
-            }
-
-            public PackInfo(int packFormat, String description) {
-                this.packFormat = packFormat;
-                this.description = description;
-            }
-
-            public int getPackFormat() {
-                return packFormat;
-            }
-
-            public String getDescription() {
-                return description;
-            }
         }
     }
 }
