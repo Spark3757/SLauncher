@@ -67,4 +67,12 @@ public final class UpdateInstallerWizardProvider implements WizardProvider {
     public boolean cancel() {
         return true;
     }
+
+
+    @Override
+    public boolean cancelIfCannotGoBack() {
+        // VersionsPage will call wizardController.onPrev(cleanUp = true) when list is empty.
+        // So we cancel this wizard when VersionPage calls the method.
+        return true;
+    }
 }

@@ -13,6 +13,10 @@ public interface WizardProvider {
 
     boolean cancel();
 
+    default boolean cancelIfCannotGoBack() {
+        return false;
+    }
+
     interface FailureCallback {
         void onFail(Map<String, Object> settings, Exception exception, Runnable next);
     }
