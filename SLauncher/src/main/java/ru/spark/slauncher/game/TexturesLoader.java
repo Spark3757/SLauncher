@@ -48,8 +48,12 @@ public final class TexturesLoader {
     private final static Map<TextureModel, LoadedTexture> DEFAULT_SKINS = new EnumMap<>(TextureModel.class);
 
     static {
-        loadDefaultSkin("/assets/img/steve.png", TextureModel.STEVE);
-        loadDefaultSkin("/assets/img/alex.png", TextureModel.ALEX);
+        try {
+            loadDefaultSkin("/assets/img/steve.png", TextureModel.STEVE);
+            loadDefaultSkin("/assets/img/alex.png", TextureModel.ALEX);
+        } catch (UncheckedIOException e) {
+            throw new NoClassDefFoundError("Steve and alex default skin image is not found");
+        }
     }
 
     private TexturesLoader() {
