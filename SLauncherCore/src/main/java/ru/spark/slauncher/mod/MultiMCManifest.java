@@ -3,12 +3,9 @@ package ru.spark.slauncher.mod;
 import com.google.gson.annotations.SerializedName;
 import ru.spark.slauncher.util.Immutable;
 import ru.spark.slauncher.util.gson.JsonUtils;
-import ru.spark.slauncher.util.io.CompressingUtils;
 import ru.spark.slauncher.util.io.IOUtils;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -27,21 +24,25 @@ public final class MultiMCManifest {
         this.components = components;
     }
 
-    public static MultiMCManifest readMultiMCModpackManifest(Path zipFile, Charset encoding) throws IOException {
-        try (FileSystem fs = CompressingUtils.readonly(zipFile).setEncoding(encoding).build()) {
-            Path root = Files.list(fs.getPath("/")).filter(Files::isDirectory).findAny()
-                    .orElseThrow(() -> new IOException("Not a valid MultiMC modpack"));
-            Path mmcPack = root.resolve("mmc-pack.json");
-            if (Files.notExists(mmcPack))
-                return null;
-            String json = IOUtils.readFullyAsString(Files.newInputStream(mmcPack));
-            MultiMCManifest manifest = JsonUtils.fromNonNullJson(json, MultiMCManifest.class);
+    /**
+     * Read MultiMC modpack manifest from zip file
+     *
+     * @param root root path in zip file (Path root is a path of ZipFileSystem)
+     * @return the MultiMC modpack manifest.
+     * @throws IOException                        if zip file is malformed
+     * @throws com.google.gson.JsonParseException if manifest is malformed.
+     */
+    public static MultiMCManifest readMultiMCModpackManifest(Path root) throws IOException {
+        Path mmcPack = root.resolve("mmc-pack.json");
+        if (Files.notExists(mmcPack))
+            return null;
+        String json = IOUtils.readFullyAsString(Files.newInputStream(mmcPack));
+        MultiMCManifest manifest = JsonUtils.fromNonNullJson(json, MultiMCManifest.class);
 
-            if (manifest.getComponents() == null)
-                throw new IOException("mmc-pack.json malformed.");
+        if (manifest.getComponents() == null)
+            throw new IOException("mmc-pack.json malformed.");
 
-            return manifest;
-        }
+        return manifest;
     }
 
     public int getFormatVersion() {
