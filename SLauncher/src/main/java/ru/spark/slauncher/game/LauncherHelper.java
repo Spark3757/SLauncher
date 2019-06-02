@@ -1,6 +1,7 @@
 package ru.spark.slauncher.game;
 
 import javafx.application.Platform;
+import javafx.stage.Stage;
 import ru.spark.slauncher.Launcher;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.AuthInfo;
@@ -397,7 +398,10 @@ public final class LauncherHelper {
     private void checkExit() {
         switch (launcherVisibility) {
             case HIDE_AND_REOPEN:
-                Platform.runLater(Controllers.getStage()::show);
+                Platform.runLater(() -> {
+                    Optional.ofNullable(Controllers.getStage())
+                            .ifPresent(Stage::show);
+                });
                 break;
             case KEEP:
                 // No operations here
