@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.JFXDialogLayout?>
+<?import com.jfoenix.controls.JFXTextField?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.StackPane?>
+<?import ru.spark.slauncher.ui.construct.SpinnerPane?>
+<fx:root xmlns:fx="http://javafx.com/fxml"
+         xmlns="http://javafx.com/javafx"
+         type="StackPane">
+    <JFXDialogLayout>
+        <heading>
+            <Label fx:id="content"/>
+        </heading>
+        <body>
+            <JFXTextField fx:id="textField"/>
+        </body>
+        <actions>
+            <Label fx:id="lblCreationWarning"/>
+            <SpinnerPane fx:id="acceptPane" styleClass="small-spinner-pane">
+                <JFXButton fx:id="acceptButton" text="%button.ok" styleClass="dialog-accept"/>
+            </SpinnerPane>
+            <JFXButton fx:id="cancelButton" styleClass="dialog-cancel" text="%button.cancel"/>
+        </actions>
+    </JFXDialogLayout>
+</fx:root>

@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.jfoenix.controls.*?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.StackPane?>
+<?import ru.spark.slauncher.ui.versions.InstallerListPage?>
+<?import ru.spark.slauncher.ui.versions.ModListPage?>
+<?import ru.spark.slauncher.ui.versions.VersionSettingsPage?>
+<?import ru.spark.slauncher.ui.versions.WorldListPage?>
+<fx:root xmlns:fx="http://javafx.com/fxml"
+         xmlns="http://javafx.com/javafx"
+         fx:id="rootPane"
+         type="StackPane">
+    <JFXRippler/>
+    <StackPane fx:id="contentPane">
+        <JFXTabPane fx:id="tabPane">
+            <Tab text="%settings">
+                <VersionSettingsPage fx:id="versionSettings"/>
+            </Tab>
+            <Tab fx:id="modTab" text="%mods">
+                <ModListPage fx:id="mod"/>
+            </Tab>
+            <Tab text="%settings.tabs.installers">
+                <InstallerListPage fx:id="installer"/>
+            </Tab>
+            <Tab text="%world">
+                <WorldListPage fx:id="world"/>
+            </Tab>
+        </JFXTabPane>
+
+        <HBox alignment="TOP_RIGHT" style="-fx-padding: 4;" spacing="3" pickOnBounds="false">
+            <JFXButton fx:id="btnTestGame" maxHeight="40.0" minHeight="40.0" onMouseClicked="#onTestGame"
+                       styleClass="toggle-icon3"/>
+            <JFXButton fx:id="btnBrowseMenu" maxHeight="40.0" minHeight="40.0" onMouseClicked="#onBrowseMenu"
+                       styleClass="toggle-icon3">
+                <graphic>
+                    <fx:include source="/assets/svg/folder-open.fxml"/>
+                </graphic>
+            </JFXButton>
+            <JFXButton fx:id="btnManagementMenu" maxHeight="40.0" minHeight="40.0" onMouseClicked="#onManagementMenu"
+                       styleClass="toggle-icon3">
+                <graphic>
+                    <fx:include source="/assets/svg/wrench-white.fxml"/>
+                </graphic>
+            </JFXButton>
+        </HBox>
+    </StackPane>
+</fx:root>

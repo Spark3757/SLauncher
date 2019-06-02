@@ -1,0 +1,161 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '4.0.0'
+    id 'application'
+}
+
+import java.nio.file.FileSystems
+import java.security.KeyFactory
+import java.security.MessageDigest
+import java.security.Signature
+import java.security.spec.PKCS8EncodedKeySpec
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
+import java.util.jar.Pack200
+import java.util.zip.GZIPOutputStream
+import java.util.zip.ZipFile
+import java.nio.file.Files
+
+import org.tukaani.xz.LZMA2Options
+import org.tukaani.xz.XZOutputStream
+
+def buildnumber = System.getenv("BUILD_NUMBER") ?: "SNAPSHOT"
+if (System.getenv("BUILD_NUMBER") != null && System.getenv("BUILD_NUMBER_OFFSET") != null)
+    buildnumber = (Integer.parseInt(System.getenv("BUILD_NUMBER")) - Integer.parseInt(System.getenv("BUILD_NUMBER_OFFSET"))).toString()
+def versionroot = System.getenv("VERSION_ROOT") ?: "3.2.2"
+version = versionroot + '.' + buildnumber
+
+mainClassName = 'ru.spark.slauncher.Main'
+
+dependencies {
+    compile project(":SLauncherCore")
+    compile rootProject.files("lib/JFoenix.jar")
+    compile 'io.sentry:sentry:1.7.16'
+}
+
+def digest(String algorithm, byte[] bytes) {
+    return MessageDigest.getInstance(algorithm).digest(bytes)
+}
+
+def createChecksum(File file) {
+    def algorithm = "SHA-1"
+    def suffix = "sha1"
+    new File(file.parentFile, file.name + "." + suffix).text = digest(algorithm, file.bytes).encodeHex().toString() + "\n"
+}
+
+def attachSignature(File jar) {
+    def keyLocation = System.getenv("SLAUNCHER_SIGNATURE_KEY")
+    if (keyLocation == null)
+        return
+    def privatekey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(new File(keyLocation).bytes))
+
+    def signer = Signature.getInstance("SHA512withRSA")
+    signer.initSign(privatekey)
+    new ZipFile(jar).withCloseable { zip ->
+        zip.stream()
+                .sorted(Comparator.comparing { it.name })
+                .filter { it.name != "META-INF/slauncher_signature" }
+                .forEach {
+                    signer.update(digest("SHA-512", it.name.getBytes("UTF-8")))
+                    signer.update(digest("SHA-512", zip.getInputStream(it).bytes))
+                }
+    }
+    def signature = signer.sign()
+
+    FileSystems.newFileSystem(URI.create("jar:" + jar.toURI()), [:]).withCloseable { zipfs ->
+        Files.newOutputStream(zipfs.getPath("META-INF/slauncher_signature")).withCloseable { it << signature }
+    }
+}
+
+ext.packer = Pack200.newPacker()
+packer.properties()["pack.effort"] = "9"
+ext.unpacker = Pack200.newUnpacker()
+
+def repack(File file) {
+    def packed = new ByteArrayOutputStream()
+    new JarFile(file).withCloseable { packer.pack(it, packed) }
+    new JarOutputStream(file.newOutputStream()).withCloseable { unpacker.unpack(new ByteArrayInputStream(packed.toByteArray()), it) }
+}
+
+jar {
+    manifest {
+        attributes 'Created-By': 'Copyright(c) 2018-2019 SLauncher.',
+                'Main-Class': mainClassName,
+                'Multi-Release': 'true',
+                'Implementation-Version': version
+    }
+    finalizedBy shadowJar
+}
+
+shadowJar {
+    classifier = null
+
+    exclude 'META-INF/maven/**'
+    exclude 'META-INF/NOTICE.txt'
+    exclude 'META-INF/LICENSE.txt'
+
+    dependencies {
+        exclude(dependency('org.jetbrains:annotations'))
+    }
+
+    doLast {
+        repack(jar.archivePath)
+        attachSignature(jar.archivePath)
+        createChecksum(jar.archivePath)
+    }
+}
+
+def createExecutable(String suffix, String header) {
+    def output = new File(jar.archivePath.parentFile, jar.archivePath.name[0..-4] + suffix)
+    output.bytes = new File(project.projectDir, header).bytes
+    output << jar.archivePath.bytes
+    createChecksum(output)
+}
+
+processResources {
+    ext.convertToBSS = { String resource ->
+        // exclude resource
+        doFirst {
+            def cssFile = new File(this.projectDir, "src/main/resources/" + resource)
+            def bssFile = new File(this.projectDir, "build/compiled-resources/" + resource[0..-4] + "bss")
+            bssFile.parentFile.mkdirs()
+            exec {
+                commandLine 'javapackager', '-createbss', '-outdir', bssFile.parent, '-srcfiles', cssFile.path
+            }
+        }
+    }
+    from "build/compiled-resources"
+
+    convertToBSS "assets/css/root.css"
+    convertToBSS "assets/css/green.css"
+}
+
+task makePack(dependsOn: jar) {
+    ext.outputPath = new File(jar.archivePath.parentFile, jar.archivePath.name[0..-4] + "pack")
+    doLast {
+        outputPath.newOutputStream().withCloseable { out ->
+            new JarFile(jar.archivePath).withCloseable { jarFile -> packer.pack(jarFile, out) }
+        }
+        createChecksum(outputPath)
+    }
+}
+
+task makePackXz(dependsOn: makePack) doLast {
+    def packXz = new File(makePack.outputPath.parentFile, makePack.outputPath.name + ".xz")
+    new XZOutputStream(packXz.newOutputStream(), new LZMA2Options(5)).withCloseable { it << makePack.outputPath.bytes }
+    createChecksum(packXz)
+}
+
+task makePackGz(dependsOn: makePack) doLast {
+    def packGz = new File(makePack.outputPath.parentFile, makePack.outputPath.name + ".gz")
+    new GZIPOutputStream(packGz.newOutputStream()).withCloseable { it << makePack.outputPath.bytes }
+    createChecksum(packGz)
+}
+
+
+task makeExecutables(dependsOn: jar) doLast {
+    createExecutable("exe", "src/main/resources/assets/SLauncher.exe")
+}
+
+build.dependsOn makePackXz
+build.dependsOn makePackGz
+build.dependsOn makeExecutables
