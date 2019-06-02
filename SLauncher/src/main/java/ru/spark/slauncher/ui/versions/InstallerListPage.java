@@ -1,5 +1,8 @@
 package ru.spark.slauncher.ui.versions;
 
+import javafx.scene.Node;
+import javafx.scene.control.Skin;
+import javafx.stage.FileChooser;
 import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.MaintainTask;
 import ru.spark.slauncher.download.game.VersionJsonSaveTask;
@@ -9,24 +12,41 @@ import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.ui.Controllers;
-import ru.spark.slauncher.ui.InstallerItem;
-import ru.spark.slauncher.ui.ListPage;
+import ru.spark.slauncher.task.TaskExecutor;
+import ru.spark.slauncher.task.TaskListener;
+import ru.spark.slauncher.ui.*;
 import ru.spark.slauncher.ui.download.InstallerWizardProvider;
 import ru.spark.slauncher.ui.download.UpdateInstallerWizardProvider;
+import ru.spark.slauncher.util.io.FileUtils;
 
+import java.io.File;
+import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static ru.spark.slauncher.download.LibraryAnalyzer.LibraryType.*;
+import static ru.spark.slauncher.ui.FXUtils.runInFX;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
-public class InstallerListPage extends ListPage<InstallerItem> {
+public class InstallerListPage extends ListPageBase<InstallerItem> {
     private Profile profile;
     private String versionId;
     private Version version;
     private String gameVersion;
+
+    {
+        FXUtils.applyDragListener(this, it -> Arrays.asList("jar", "exe").contains(FileUtils.getExtension(it)), mods -> {
+            if (!mods.isEmpty())
+                doInstallOffline(mods.get(0));
+        });
+    }
+
+    @Override
+    protected Skin<?> createDefaultSkin() {
+        return new InstallerListPageSkin();
+    }
 
     public void loadVersion(Profile profile, String versionId) {
         this.profile = profile;
@@ -66,11 +86,54 @@ public class InstallerListPage extends ListPage<InstallerItem> {
         }).start();
     }
 
-    @Override
-    public void add() {
+    public void installOnline() {
         if (gameVersion == null)
             Controllers.dialog(i18n("version.cannot_read"));
         else
             Controllers.getDecorator().startWizard(new InstallerWizardProvider(profile, gameVersion, version));
+    }
+
+    public void installOffline() {
+        FileChooser chooser = new FileChooser();
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("install.installer.install_offline.extension"), "*.jar", "*.exe"));
+        File file = chooser.showOpenDialog(Controllers.getStage());
+        if (file != null) doInstallOffline(file);
+    }
+
+    private void doInstallOffline(File file) {
+        Task task = profile.getDependency().installLibraryAsync(version, file.toPath())
+                .then(profile.getRepository().refreshVersionsAsync());
+        task.setName(i18n("install.installer.install_offline"));
+        TaskExecutor executor = task.executor(new TaskListener() {
+            @Override
+            public void onStop(boolean success, TaskExecutor executor) {
+                runInFX(() -> {
+                    if (success) {
+                        loadVersion(profile, versionId);
+                        Controllers.dialog(i18n("install.success"));
+                    } else {
+                        if (executor.getLastException() == null)
+                            return;
+                        InstallerWizardProvider.alertFailureMessage(executor.getLastException(), null);
+                    }
+                });
+            }
+        });
+        Controllers.taskDialog(executor, i18n("install.installer.install_offline"));
+        executor.start();
+    }
+
+    private class InstallerListPageSkin extends ToolbarListPageSkin<InstallerListPage> {
+
+        InstallerListPageSkin() {
+            super(InstallerListPage.this);
+        }
+
+        @Override
+        protected List<Node> initializeToolbar(InstallerListPage skinnable) {
+            return Arrays.asList(
+                    createToolbarButton(i18n("install.installer.install_online"), SVG::plus, skinnable::installOnline),
+                    createToolbarButton(i18n("install.installer.install_offline"), SVG::plus, skinnable::installOffline));
+        }
     }
 }

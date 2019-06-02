@@ -1,9 +1,11 @@
 package ru.spark.slauncher.download.forge;
 
+import com.google.gson.JsonParseException;
 import ru.spark.slauncher.game.Artifact;
 import ru.spark.slauncher.game.Library;
 import ru.spark.slauncher.util.Immutable;
-import ru.spark.slauncher.util.function.ExceptionalFunction;
+import ru.spark.slauncher.util.gson.TolerableValidationException;
+import ru.spark.slauncher.util.gson.Validation;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Immutable
-public class ForgeNewInstallProfile {
+public class ForgeNewInstallProfile implements Validation {
 
     private final int spec;
     private final String minecraft;
@@ -83,6 +85,8 @@ public class ForgeNewInstallProfile {
 
     /**
      * Data for processors.
+     *
+     * @return a mutable data map for processors.
      */
     public Map<String, String> getData() {
         if (data == null)
@@ -91,7 +95,13 @@ public class ForgeNewInstallProfile {
         return data.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().getClient()));
     }
 
-    public static class Processor {
+    @Override
+    public void validate() throws JsonParseException, TolerableValidationException {
+        if (minecraft == null || json == null || path == null)
+            throw new JsonParseException("ForgeNewInstallProfile is malformed");
+    }
+
+    public static class Processor implements Validation {
         private final List<String> sides;
         private final Artifact jar;
         private final List<Artifact> classpath;
@@ -143,7 +153,6 @@ public class ForgeNewInstallProfile {
          * {SIDE}: values other than "client" will be ignored.
          *
          * @return arguments to pass to the processor jar.
-         * @see ForgeNewInstallTask#parseLiteral(String, Map, ExceptionalFunction)
          */
         public List<String> getArgs() {
             return args == null ? Collections.emptyList() : args;
@@ -156,10 +165,15 @@ public class ForgeNewInstallProfile {
          * Values can be in one of {entry} or 'literal'. Should be SHA-1 checksum.
          *
          * @return files output from this processor.
-         * @see ForgeNewInstallTask#parseLiteral(String, Map, ExceptionalFunction)
          */
         public Map<String, String> getOutputs() {
             return outputs == null ? Collections.emptyMap() : outputs;
+        }
+
+        @Override
+        public void validate() throws JsonParseException, TolerableValidationException {
+            if (jar == null)
+                throw new JsonParseException("Processor::jar cannot be null");
         }
     }
 

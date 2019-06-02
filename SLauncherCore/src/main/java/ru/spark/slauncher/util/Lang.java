@@ -201,4 +201,9 @@ public final class Lang {
     public static void handleUncaughtException(Throwable e) {
         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
     }
+
+    public static <T> T getOrDefault(List<T> a, int index, T defaultValue) {
+        return index < 0 || index >= a.size() ? defaultValue : a.get(index);
+    }
+
 }

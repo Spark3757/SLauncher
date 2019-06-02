@@ -4,6 +4,7 @@ import javafx.scene.Node;
 import ru.spark.slauncher.download.DownloadProvider;
 import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.RemoteVersion;
+import ru.spark.slauncher.download.VersionMismatchException;
 import ru.spark.slauncher.download.game.LibraryDownloadException;
 import ru.spark.slauncher.download.optifine.OptiFineInstallTask;
 import ru.spark.slauncher.game.Library;
@@ -55,6 +56,11 @@ public final class InstallerWizardProvider implements WizardProvider {
             }
         } else if (exception instanceof OptiFineInstallTask.UnsupportedOptiFineInstallationException) {
             Controllers.dialog(i18n("install.failed.optifine_conflict"), i18n("install.failed"), MessageType.ERROR, next);
+        } else if (exception instanceof UnsupportedOperationException) {
+            Controllers.dialog(i18n("install.failed.install_online"), i18n("install.failed"), MessageType.ERROR, next);
+        } else if (exception instanceof VersionMismatchException) {
+            VersionMismatchException e = ((VersionMismatchException) exception);
+            Controllers.dialog(i18n("install.failed.version_mismatch", e.getExpect(), e.getActual()), i18n("install.failed"), MessageType.ERROR, next);
         } else {
             Controllers.dialog(StringUtils.getStackTrace(exception), i18n("install.failed"), MessageType.ERROR, next);
         }

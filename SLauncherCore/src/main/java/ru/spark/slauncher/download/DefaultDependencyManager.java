@@ -14,6 +14,9 @@ import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskResult;
 import ru.spark.slauncher.util.function.ExceptionalFunction;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 /**
  * Note: This class has no state.
  *
@@ -98,5 +101,27 @@ public class DefaultDependencyManager extends AbstractDependencyManager {
 
     public ExceptionalFunction<Version, TaskResult<Version>, ?> installLibraryAsync(RemoteVersion libraryVersion) {
         return version -> installLibraryAsync(version, libraryVersion);
+    }
+
+    public Task installLibraryAsync(Version oldVersion, Path installer) {
+        return Task
+                .of(() -> {
+                })
+                .thenCompose(() -> {
+                    try {
+                        return ForgeInstallTask.install(this, oldVersion, installer);
+                    } catch (IOException ignore) {
+                    }
+
+                    try {
+                        return OptiFineInstallTask.install(this, oldVersion, installer);
+                    } catch (IOException ignore) {
+                    }
+
+                    throw new UnsupportedOperationException("Library cannot be recognized");
+                })
+                .thenCompose(LibrariesUniqueTask::new)
+                .thenCompose(MaintainTask::new)
+                .thenCompose(newVersion -> new VersionJsonSaveTask(repository, newVersion));
     }
 }
