@@ -3,9 +3,11 @@ package ru.spark.slauncher.auth.yggdrasil;
 import ru.spark.slauncher.auth.AccountFactory;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.CharacterSelector;
+import ru.spark.slauncher.util.javafx.ObservableOptionalCache;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import static ru.spark.slauncher.util.Lang.tryCast;
 
@@ -45,7 +47,9 @@ public class YggdrasilAccountFactory extends AccountFactory<YggdrasilAccount> {
                     @SuppressWarnings("unchecked")
                     Map<String, String> properties = it;
                     GameProfile selected = session.getSelectedProfile();
-                    service.getProfileRepository().put(selected.getId(), new CompleteGameProfile(selected, properties));
+                    ObservableOptionalCache<UUID, CompleteGameProfile, AuthenticationException> profileRepository = service.getProfileRepository();
+                    profileRepository.put(selected.getId(), new CompleteGameProfile(selected, properties));
+                    profileRepository.invalidate(selected.getId());
                 });
 
         return new YggdrasilAccount(service, username, session);

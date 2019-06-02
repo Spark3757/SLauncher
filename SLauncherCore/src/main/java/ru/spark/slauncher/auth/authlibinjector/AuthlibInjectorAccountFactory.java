@@ -6,9 +6,11 @@ import ru.spark.slauncher.auth.CharacterSelector;
 import ru.spark.slauncher.auth.yggdrasil.CompleteGameProfile;
 import ru.spark.slauncher.auth.yggdrasil.GameProfile;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilSession;
+import ru.spark.slauncher.util.javafx.ObservableOptionalCache;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static ru.spark.slauncher.util.Lang.tryCast;
@@ -54,7 +56,9 @@ public class AuthlibInjectorAccountFactory extends AccountFactory<AuthlibInjecto
                     @SuppressWarnings("unchecked")
                     Map<String, String> properties = it;
                     GameProfile selected = session.getSelectedProfile();
-                    server.getYggdrasilService().getProfileRepository().put(selected.getId(), new CompleteGameProfile(selected, properties));
+                    ObservableOptionalCache<UUID, CompleteGameProfile, AuthenticationException> profileRepository = server.getYggdrasilService().getProfileRepository();
+                    profileRepository.put(selected.getId(), new CompleteGameProfile(selected, properties));
+                    profileRepository.invalidate(selected.getId());
                 });
 
         return new AuthlibInjectorAccount(server, downloader, username, session);
