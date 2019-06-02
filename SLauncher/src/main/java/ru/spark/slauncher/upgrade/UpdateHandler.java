@@ -8,9 +8,8 @@ import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskExecutor;
 import ru.spark.slauncher.ui.Controllers;
-import ru.spark.slauncher.ui.FXUtils;
+import ru.spark.slauncher.ui.UpgradeDialog;
 import ru.spark.slauncher.ui.construct.MessageDialogPane;
-import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.i18n.I18n;
@@ -23,13 +22,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static ru.spark.slauncher.ui.FXUtils.checkFxUserThread;
+import static ru.spark.slauncher.util.Lang.thread;
+import static ru.spark.slauncher.util.Logging.LOG;
+import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class UpdateHandler {
     private UpdateHandler() {
@@ -71,43 +72,44 @@ public final class UpdateHandler {
     }
 
     public static void updateFrom(RemoteVersion version) {
-        FXUtils.checkFxUserThread();
+        checkFxUserThread();
 
-        Path downloaded;
-        try {
-            downloaded = Files.createTempFile("slauncher-update-", ".jar");
-        } catch (IOException e) {
-            Logging.LOG.log(Level.WARNING, "Failed to create temp file", e);
-            return;
-        }
+        Controllers.dialog(new UpgradeDialog(() -> {
+            Path downloaded;
+            try {
+                downloaded = Files.createTempFile("slauncher-update-", ".jar");
+            } catch (IOException e) {
+                LOG.log(Level.WARNING, "Failed to create temp file", e);
+                return;
+            }
 
-        Task task = new SLauncherDownloadTask(version, downloaded);
+            Task task = new SLauncherDownloadTask(version, downloaded);
 
-        TaskExecutor executor = task.executor();
-        Controllers.taskDialog(executor, I18n.i18n("message.downloading"));
-        Lang.thread(() -> {
-            boolean success = executor.test();
+            TaskExecutor executor = task.executor();
+            Controllers.taskDialog(executor, i18n("message.downloading"));
+            thread(() -> {
+                boolean success = executor.test();
 
-            if (success) {
-                try {
-                    if (!IntegrityChecker.isSelfVerified()) {
-                        throw new IOException("Current JAR is not verified");
+                if (success) {
+                    try {
+                        if (!IntegrityChecker.isSelfVerified()) {
+                            throw new IOException("Current JAR is not verified");
+                        }
+
+                        requestUpdate(downloaded, getCurrentLocation());
+                        System.exit(0);
+                    } catch (IOException e) {
+                        LOG.log(Level.WARNING, "Failed to update to " + version, e);
+                        Platform.runLater(() -> Controllers.dialog(StringUtils.getStackTrace(e), i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
                     }
 
-                    requestUpdate(downloaded, getCurrentLocation());
-                    System.exit(0);
-                } catch (IOException e) {
-                    Logging.LOG.log(Level.WARNING, "Failed to update to " + version, e);
-                    Platform.runLater(() -> Controllers.dialog(StringUtils.getStackTrace(e), I18n.i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
-                    return;
+                } else {
+                    Throwable e = executor.getLastException();
+                    LOG.log(Level.WARNING, "Failed to update to " + version, e);
+                    Platform.runLater(() -> Controllers.dialog(e.toString(), i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
                 }
-
-            } else {
-                Throwable e = executor.getLastException();
-                Logging.LOG.log(Level.WARNING, "Failed to update to " + version, e);
-                Platform.runLater(() -> Controllers.dialog(e.toString(), I18n.i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
-            }
-        });
+            });
+        }));
     }
 
     private static void applyUpdate(Path target) throws IOException {
@@ -141,9 +143,7 @@ public final class UpdateHandler {
         commandline.add(JavaVersion.fromCurrentEnvironment().getBinary().toString());
         commandline.add("-jar");
         commandline.add(jar.toAbsolutePath().toString());
-        for (String arg : appArgs) {
-            commandline.add(arg);
-        }
+        commandline.addAll(Arrays.asList(appArgs));
         Logging.LOG.info("Starting process: " + commandline);
         new ProcessBuilder(commandline)
                 .directory(Paths.get("").toAbsolutePath().toFile())

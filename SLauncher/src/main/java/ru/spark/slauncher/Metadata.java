@@ -14,6 +14,7 @@ public final class Metadata {
     public static final String UPDATE_URL = System.getProperty("slauncher.update_source.override", "http://update.slauncher.ru/update_link");
     public static final String CONTACT_URL = "https://vk.com/slauncher";
     public static final String HELP_URL = "https://vk.me/slauncher";
+    public static final String CHANGELOG_URL = "https://slauncher.ru/changelog";
     public static final String PUBLISH_URL = "https://slauncher.ru/";
     public static final Path MINECRAFT_DIRECTORY = OperatingSystem.getWorkingDirectory("minecraft");
     public static final Path SLauncher_DIRECTORY = OperatingSystem.getWorkingDirectory("SLauncher");
