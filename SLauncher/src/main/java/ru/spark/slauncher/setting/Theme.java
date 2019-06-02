@@ -7,6 +7,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.scene.paint.Color;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.io.IOUtils;
 import ru.spark.slauncher.util.javafx.BindingMapping;
@@ -110,7 +111,7 @@ public class Theme {
         String css;
         try {
             File temp = File.createTempFile("slauncher", ".css");
-            FileUtils.writeText(temp, IOUtils.readFullyAsString(Theme.class.getResourceAsStream("/assets/css/custom.css"))
+            FileUtils.writeText(temp, IOUtils.readFullyAsString(ResourceNotFoundError.getResourceAsStream("/assets/css/custom.css"))
                     .replace("%base-color%", color)
                     .replace("%font-color%", getColorDisplayName(getForegroundColor())));
             css = temp.toURI().toString();

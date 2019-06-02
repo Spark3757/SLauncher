@@ -20,6 +20,7 @@ import ru.spark.slauncher.event.EventManager;
 import ru.spark.slauncher.game.LauncherHelper;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Log4jLevel;
+import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.io.IOUtils;
 
@@ -155,7 +156,7 @@ public final class LogWindow extends Stage {
             FXUtils.loadFXML(this, "/assets/fxml/log.fxml");
 
             engine = webView.getEngine();
-            engine.loadContent(Lang.ignoringException(() -> IOUtils.readFullyAsString(getClass().getResourceAsStream("/assets/log-window-content.html")))
+            engine.loadContent(Lang.ignoringException(() -> IOUtils.readFullyAsString(ResourceNotFoundError.getResourceAsStream("/assets/log-window-content.html")))
                     .replace("${FONT}", config().getFontSize() + "px \"" + config().getFontFamily() + "\""));
             engine.getLoadWorker().stateProperty().addListener((a, b, newValue) -> {
                 if (newValue == Worker.State.SUCCEEDED) {
