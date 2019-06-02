@@ -22,6 +22,7 @@ public class ListPageSkin extends SkinBase<ListPage<?>> {
         SpinnerPane spinnerPane = new SpinnerPane();
         spinnerPane.getStyleClass().add("large-spinner-pane");
         Pane placeholder = new Pane();
+        VBox list = new VBox();
 
         StackPane contentPane = new StackPane();
         {
@@ -29,10 +30,8 @@ public class ListPageSkin extends SkinBase<ListPage<?>> {
             {
                 scrollPane.setFitToWidth(true);
 
-                VBox list = new VBox();
                 list.maxWidthProperty().bind(scrollPane.widthProperty());
                 list.setSpacing(10);
-                list.setPadding(new Insets(10));
 
                 VBox content = new VBox();
                 content.getChildren().setAll(list, placeholder);
@@ -70,8 +69,13 @@ public class ListPageSkin extends SkinBase<ListPage<?>> {
 
                 FXUtils.onChangeAndOperate(skinnable.refreshableProperty(),
                         refreshable -> {
-                            if (refreshable) vBox.getChildren().setAll(btnRefresh, btnAdd);
-                            else vBox.getChildren().setAll(btnAdd);
+                            if (refreshable) {
+                                list.setPadding(new Insets(10, 10, 15 + 40 + 15 + 40 + 15, 10));
+                                vBox.getChildren().setAll(btnRefresh, btnAdd);
+                            } else {
+                                list.setPadding(new Insets(10, 10, 15 + 40 + 15, 10));
+                                vBox.getChildren().setAll(btnAdd);
+                            }
                         });
             }
 
