@@ -7,11 +7,8 @@ import javafx.scene.image.Image;
 import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.ServerResponseMalformedException;
-import ru.spark.slauncher.auth.ely.ElyService;
 import ru.spark.slauncher.auth.yggdrasil.*;
 import ru.spark.slauncher.task.FileDownloadTask;
-import ru.spark.slauncher.util.Lang;
-import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.javafx.BindingMapping;
@@ -37,14 +34,15 @@ import java.util.logging.Level;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
+import static ru.spark.slauncher.util.Lang.threadPool;
+import static ru.spark.slauncher.util.Logging.LOG;
 
 /**
  * @author Spark1337
  */
 public final class TexturesLoader {
 
-    private static final ThreadPoolExecutor POOL = Lang.threadPool("TexturesDownload", true, 2, 10, TimeUnit.SECONDS);
-    private static final Path TEXTURES_DIR = Metadata.MINECRAFT_DIRECTORY.resolve("assets").resolve("skins");
+    private static final ThreadPoolExecutor POOL = threadPool("TexturesDownload", true, 2, 10, TimeUnit.SECONDS);
     // ==== Skins ====
     private final static Map<TextureModel, LoadedTexture> DEFAULT_SKINS = new EnumMap<>(TextureModel.class);
 
@@ -52,33 +50,35 @@ public final class TexturesLoader {
         loadDefaultSkin("/assets/img/steve.png", TextureModel.STEVE);
         loadDefaultSkin("/assets/img/alex.png", TextureModel.ALEX);
     }
+    private static final Path TEXTURES_DIR = Metadata.MINECRAFT_DIRECTORY.resolve("assets").resolve("skins");
 
     private TexturesLoader() {
     }
 
     private static Path getTexturePath(Texture texture) {
         String url = texture.getUrl();
-        int slash = url.lastIndexOf('/');
-        int dot = url.lastIndexOf('.');
+        int slash = 0;
+        if (url != null) {
+            slash = url.lastIndexOf('/');
+        }
+        int dot = 0;
+        if (url != null) {
+            dot = url.lastIndexOf('.');
+        }
         if (dot < slash) {
             dot = url.length();
         }
-        String hash = url.substring(slash + 1, dot);
-        String prefix = hash.length() > 2 ? hash.substring(0, 2) : "xx";
-        return TEXTURES_DIR.resolve(prefix).resolve(hash);
-    }
-
-    private static Path getTexturePath(ru.spark.slauncher.auth.ely.Texture texture) {
-        String url = texture.getUrl();
-        int slash = url.lastIndexOf('/');
-        int dot = url.lastIndexOf('.');
-        if (dot < slash) {
-            dot = url.length();
+        String hash = null;
+        if (url != null) {
+            hash = url.substring(slash + 1, dot);
         }
-        String hash = url.substring(slash + 1, dot);
-        String prefix = hash.length() > 2 ? hash.substring(0, 2) : "xx";
+        String prefix = null;
+        if (hash != null) {
+            prefix = hash.length() > 2 ? hash.substring(0, 2) : "xx";
+        }
         return TEXTURES_DIR.resolve(prefix).resolve(hash);
     }
+    // ====
 
     public static LoadedTexture loadTexture(Texture texture) throws IOException {
         if (StringUtils.isBlank(texture.getUrl())) {
@@ -90,11 +90,11 @@ public final class TexturesLoader {
             // download it
             try {
                 new FileDownloadTask(new URL(texture.getUrl()), file.toFile()).run();
-                Logging.LOG.info("Texture downloaded: " + texture.getUrl());
+                LOG.info("Texture downloaded: " + texture.getUrl());
             } catch (Exception e) {
                 if (Files.isRegularFile(file)) {
                     // concurrency conflict?
-                    Logging.LOG.log(Level.WARNING, "Failed to download texture " + texture.getUrl() + ", but the file is available", e);
+                    LOG.log(Level.WARNING, "Failed to download texture " + texture.getUrl() + ", but the file is available", e);
                 } else {
                     throw new IOException("Failed to download texture " + texture.getUrl());
                 }
@@ -111,38 +111,36 @@ public final class TexturesLoader {
         }
         return new LoadedTexture(img, metadata);
     }
-    // ====
 
-    public static LoadedTexture loadTexture(ru.spark.slauncher.auth.ely.Texture texture) throws IOException {
-        if (StringUtils.isBlank(texture.getUrl())) {
-            throw new IOException("Texture url is empty");
-        }
-
-        Path file = getTexturePath(texture);
-        if (!Files.isRegularFile(file)) {
-            // download it
-            try {
-                new FileDownloadTask(new URL(texture.getUrl()), file.toFile()).run();
-                Logging.LOG.info("Texture downloaded: " + texture.getUrl());
-            } catch (Exception e) {
-                if (Files.isRegularFile(file)) {
-                    // concurrency conflict?
-                    Logging.LOG.log(Level.WARNING, "Failed to download texture " + texture.getUrl() + ", but the file is available", e);
-                } else {
-                    throw new IOException("Failed to download texture " + texture.getUrl());
-                }
-            }
-        }
-
-        BufferedImage img;
-        try (InputStream in = Files.newInputStream(file)) {
-            img = ImageIO.read(in);
-        }
-        Map<String, String> metadata = texture.getMetadata();
-        if (metadata == null) {
-            metadata = emptyMap();
-        }
-        return new LoadedTexture(img, metadata);
+    public static ObjectBinding<LoadedTexture> skinBinding(YggdrasilService service, UUID uuid) {
+        LoadedTexture uuidFallback = getDefaultSkin(TextureModel.detectUUID(uuid));
+        return BindingMapping.of(service.getProfileRepository().binding(uuid))
+                .map(profile -> profile
+                        .flatMap(it -> {
+                            try {
+                                return YggdrasilService.getTextures(it);
+                            } catch (ServerResponseMalformedException e) {
+                                LOG.log(Level.WARNING, "Failed to parse texture payload", e);
+                                return Optional.empty();
+                            }
+                        })
+                        .flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN)))
+                        .filter(it -> StringUtils.isNotBlank(it.getUrl())))
+                .asyncMap(it -> {
+                    if (it.isPresent()) {
+                        Texture texture = it.get();
+                        return CompletableFuture.supplyAsync(() -> {
+                            try {
+                                return loadTexture(texture);
+                            } catch (IOException e) {
+                                LOG.log(Level.WARNING, "Failed to load texture " + texture.getUrl() + ", using fallback texture", e);
+                                return uuidFallback;
+                            }
+                        }, POOL);
+                    } else {
+                        return CompletableFuture.completedFuture(uuidFallback);
+                    }
+                }, uuidFallback);
     }
 
     private static void loadDefaultSkin(String path, TextureModel model) {
@@ -157,67 +155,25 @@ public final class TexturesLoader {
         return DEFAULT_SKINS.get(model);
     }
 
-    public static ObjectBinding<LoadedTexture> skinBinding(YggdrasilService service, UUID uuid) {
-        LoadedTexture uuidFallback = getDefaultSkin(TextureModel.detectUUID(uuid));
-        return BindingMapping.of(service.getProfileRepository().binding(uuid))
-                .map(profile -> profile
-                        .flatMap(it -> {
-                            try {
-                                return YggdrasilService.getTextures(it);
-                            } catch (ServerResponseMalformedException e) {
-                                Logging.LOG.log(Level.WARNING, "Failed to parse texture payload", e);
-                                return Optional.empty();
-                            }
-                        })
-                        .flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN)))
-                        .filter(it -> StringUtils.isNotBlank(it.getUrl())))
-                .asyncMap(it -> {
-                    if (it.isPresent()) {
-                        Texture texture = it.get();
-                        return CompletableFuture.supplyAsync(() -> {
-                            try {
-                                return loadTexture(texture);
-                            } catch (IOException e) {
-                                Logging.LOG.log(Level.WARNING, "Failed to load texture " + texture.getUrl() + ", using fallback texture", e);
-                                return uuidFallback;
-                            }
-                        }, POOL);
-                    } else {
-                        return CompletableFuture.completedFuture(uuidFallback);
-                    }
-                }, uuidFallback);
-    }
+    // ==== Texture Loading ====
+    public static class LoadedTexture {
+        private final BufferedImage image;
+        private final Map<String, String> metadata;
 
-    public static ObjectBinding<LoadedTexture> skinBinding(ElyService service, UUID uuid) {
-        LoadedTexture uuidFallback = getDefaultSkin(TextureModel.detectUUID(uuid));
-        return BindingMapping.of(service.getProfileRepository().binding(uuid))
-                .map(profile -> profile
-                        .flatMap(it -> {
-                            try {
-                                return ElyService.getTextures(it);
-                            } catch (ServerResponseMalformedException e) {
-                                Logging.LOG.log(Level.WARNING, "Failed to parse texture payload", e);
-                                return Optional.empty();
-                            }
-                        })
-                        .flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN)))
-                        .filter(it -> StringUtils.isNotBlank(it.getUrl())))
-                .asyncMap(it -> {
-                    if (it.isPresent()) {
-                        ru.spark.slauncher.auth.ely.Texture texture = it.get();
-                        return CompletableFuture.supplyAsync(() -> {
-                            try {
-                                return loadTexture(texture);
-                            } catch (IOException e) {
-                                Logging.LOG.log(Level.WARNING, "Failed to load texture " + texture.getUrl() + ", using fallback texture", e);
-                                return uuidFallback;
-                            }
-                        }, POOL);
-                    } else {
-                        return CompletableFuture.completedFuture(uuidFallback);
-                    }
-                }, uuidFallback);
+        public LoadedTexture(BufferedImage image, Map<String, String> metadata) {
+            this.image = requireNonNull(image);
+            this.metadata = requireNonNull(metadata);
+        }
+
+        public BufferedImage getImage() {
+            return image;
+        }
+
+        public Map<String, String> getMetadata() {
+            return metadata;
+        }
     }
+    // ====
 
     // ==== Avatar ====
     public static BufferedImage toAvatar(BufferedImage skin, int size) {
@@ -237,15 +193,8 @@ public final class TexturesLoader {
         g.dispose();
         return avatar;
     }
-    // ====
 
     public static ObjectBinding<Image> fxAvatarBinding(YggdrasilService service, UUID uuid, int size) {
-        return BindingMapping.of(skinBinding(service, uuid))
-                .map(it -> toAvatar(it.image, size))
-                .map(img -> SwingFXUtils.toFXImage(img, null));
-    }
-
-    public static ObjectBinding<Image> fxAvatarBinding(ElyService service, UUID uuid, int size) {
         return BindingMapping.of(skinBinding(service, uuid))
                 .map(it -> toAvatar(it.image, size))
                 .map(img -> SwingFXUtils.toFXImage(img, null));
@@ -257,25 +206,6 @@ public final class TexturesLoader {
         } else {
             return Bindings.createObjectBinding(
                     () -> SwingFXUtils.toFXImage(toAvatar(getDefaultSkin(TextureModel.detectUUID(account.getUUID())).image, size), null));
-        }
-    }
-
-    // ==== Texture Loading ====
-    public static class LoadedTexture {
-        private final BufferedImage image;
-        private final Map<String, String> metadata;
-
-        public LoadedTexture(BufferedImage image, Map<String, String> metadata) {
-            this.image = requireNonNull(image);
-            this.metadata = requireNonNull(metadata);
-        }
-
-        public BufferedImage getImage() {
-            return image;
-        }
-
-        public Map<String, String> getMetadata() {
-            return metadata;
         }
     }
     // ====

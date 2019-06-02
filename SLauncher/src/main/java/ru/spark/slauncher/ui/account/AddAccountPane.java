@@ -43,6 +43,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static ru.spark.slauncher.setting.ConfigHolder.config;
+import static ru.spark.slauncher.ui.FXUtils.*;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AddAccountPane extends StackPane {
@@ -70,21 +71,22 @@ public class AddAccountPane extends StackPane {
     private JFXButton btnManageServer;
     @FXML
     private SpinnerPane acceptPane;
+
+    private ListProperty<Hyperlink> links = new SimpleListProperty<>();
     @FXML
     private HBox linksContainer;
-    private ListProperty<Hyperlink> links = new SimpleListProperty<>();
 
     public AddAccountPane() {
         FXUtils.loadFXML(this, "/assets/fxml/account-add.fxml");
 
-        cboServers.setCellFactory(FXUtils.jfxListCellFactory(server -> new TwoLineListItem(server.getName(), server.getUrl())));
-        cboServers.setConverter(FXUtils.stringConverter(AuthlibInjectorServer::getName));
+        cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), server.getUrl())));
+        cboServers.setConverter(stringConverter(AuthlibInjectorServer::getName));
         Bindings.bindContent(cboServers.getItems(), config().getAuthlibInjectorServers());
-        cboServers.getItems().addListener(FXUtils.onInvalidating(this::selectDefaultServer));
+        cboServers.getItems().addListener(onInvalidating(this::selectDefaultServer));
         selectDefaultServer();
 
-        cboType.getItems().setAll(Accounts.FACTORY_OFFLINE, Accounts.FACTORY_MOJANG, /* Accounts.FACTORY_ELY,*/ Accounts.FACTORY_AUTHLIB_INJECTOR);
-        cboType.setConverter(FXUtils.stringConverter(Accounts::getLocalizedLoginTypeName));
+        cboType.getItems().setAll(Accounts.FACTORY_OFFLINE, Accounts.FACTORY_MOJANG, Accounts.FACTORY_AUTHLIB_INJECTOR);
+        cboType.setConverter(stringConverter(Accounts::getLocalizedLoginTypeName));
         // try selecting the preferred login type
         cboType.getSelectionModel().select(
                 cboType.getItems().stream()
@@ -95,7 +97,7 @@ public class AddAccountPane extends StackPane {
         btnAddServer.visibleProperty().bind(cboServers.visibleProperty());
         btnManageServer.visibleProperty().bind(cboServers.visibleProperty());
 
-        cboServers.getItems().addListener(FXUtils.onInvalidating(this::checkIfNoServer));
+        cboServers.getItems().addListener(onInvalidating(this::checkIfNoServer));
         checkIfNoServer();
 
         ReadOnlyObjectProperty<AccountFactory<?>> loginType = cboType.getSelectionModel().selectedItemProperty();
@@ -147,48 +149,6 @@ public class AddAccountPane extends StackPane {
             }
         }
         return unmodifiableList(result);
-    }
-
-    public static String accountException(Exception exception) {
-        if (exception instanceof NoCharacterException) {
-            return i18n("account.failed.no_character");
-        } else if (exception instanceof ServerDisconnectException) {
-            return i18n("account.failed.connect_authentication_server");
-        } else if (exception instanceof ServerResponseMalformedException) {
-            return i18n("account.failed.server_response_malformed");
-        } else if (exception instanceof RemoteAuthenticationException) {
-            RemoteAuthenticationException remoteException = (RemoteAuthenticationException) exception;
-            String remoteMessage = remoteException.getRemoteMessage();
-            if ("ForbiddenOperationException".equals(remoteException.getRemoteName()) && remoteMessage != null) {
-                if (remoteMessage.contains("Invalid credentials"))
-                    return i18n("account.failed.invalid_credentials");
-                else if (remoteMessage.contains("Invalid token"))
-                    return i18n("account.failed.invalid_token");
-                else if (remoteMessage.contains("Invalid username or password"))
-                    return i18n("account.failed.invalid_password");
-            }
-            return exception.getMessage();
-        } else if (exception instanceof ru.spark.slauncher.auth.ely.RemoteAuthenticationException) {
-            ru.spark.slauncher.auth.ely.RemoteAuthenticationException remoteException = (ru.spark.slauncher.auth.ely.RemoteAuthenticationException) exception;
-            String remoteMessage = remoteException.getRemoteMessage();
-            if ("ForbiddenOperationException".equals(remoteException.getRemoteName()) && remoteMessage != null) {
-                if (remoteMessage.contains("Invalid credentials"))
-                    return i18n("account.failed.invalid_credentials");
-                else if (remoteMessage.contains("Invalid token"))
-                    return i18n("account.failed.invalid_token");
-                else if (remoteMessage.contains("Invalid username or password"))
-                    return i18n("account.failed.invalid_password");
-            }
-            return exception.getMessage();
-        } else if (exception instanceof AuthlibInjectorDownloadException) {
-            return i18n("account.failed.injector_download_failure");
-        } else if (exception instanceof CharacterDeletedException) {
-            return i18n("account.failed.character_deleted");
-        } else if (exception.getClass() == AuthenticationException.class) {
-            return exception.getLocalizedMessage();
-        } else {
-            return exception.getClass().getName() + ": " + exception.getLocalizedMessage();
-        }
     }
 
     /**
@@ -276,6 +236,36 @@ public class AddAccountPane extends StackPane {
         Controllers.dialog(new AddAuthlibInjectorServerPane());
     }
 
+    public static String accountException(Exception exception) {
+        if (exception instanceof NoCharacterException) {
+            return i18n("account.failed.no_character");
+        } else if (exception instanceof ServerDisconnectException) {
+            return i18n("account.failed.connect_authentication_server");
+        } else if (exception instanceof ServerResponseMalformedException) {
+            return i18n("account.failed.server_response_malformed");
+        } else if (exception instanceof RemoteAuthenticationException) {
+            RemoteAuthenticationException remoteException = (RemoteAuthenticationException) exception;
+            String remoteMessage = remoteException.getRemoteMessage();
+            if ("ForbiddenOperationException".equals(remoteException.getRemoteName()) && remoteMessage != null) {
+                if (remoteMessage.contains("Invalid credentials"))
+                    return i18n("account.failed.invalid_credentials");
+                else if (remoteMessage.contains("Invalid token"))
+                    return i18n("account.failed.invalid_token");
+                else if (remoteMessage.contains("Invalid username or password"))
+                    return i18n("account.failed.invalid_password");
+            }
+            return exception.getMessage();
+        } else if (exception instanceof AuthlibInjectorDownloadException) {
+            return i18n("account.failed.injector_download_failure");
+        } else if (exception instanceof CharacterDeletedException) {
+            return i18n("account.failed.character_deleted");
+        } else if (exception.getClass() == AuthenticationException.class) {
+            return exception.getLocalizedMessage();
+        } else {
+            return exception.getClass().getName() + ": " + exception.getLocalizedMessage();
+        }
+    }
+
     private class Selector extends BorderPane implements CharacterSelector {
 
         private final AdvancedListBox listBox = new AdvancedListBox();
@@ -283,7 +273,6 @@ public class AddAccountPane extends StackPane {
 
         private final CountDownLatch latch = new CountDownLatch(1);
         private GameProfile selectedProfile = null;
-        private ru.spark.slauncher.auth.ely.GameProfile selectedElyProfile = null;
 
         public Selector() {
             setStyle("-fx-padding: 8px;");
@@ -331,41 +320,13 @@ public class AddAccountPane extends StackPane {
             } catch (InterruptedException ignore) {
                 throw new NoSelectedCharacterException();
             } finally {
-                FXUtils.runInFX(() -> Selector.this.fireEvent(new DialogCloseEvent()));
+                runInFX(() -> Selector.this.fireEvent(new DialogCloseEvent()));
             }
         }
 
         @Override
-        public ru.spark.slauncher.auth.ely.GameProfile select(ElyService service, List<ru.spark.slauncher.auth.ely.GameProfile> profiles) throws NoSelectedCharacterException {
-            Platform.runLater(() -> {
-                for (ru.spark.slauncher.auth.ely.GameProfile profile : profiles) {
-                    ImageView portraitView = new ImageView();
-                    portraitView.setSmooth(false);
-                    portraitView.imageProperty().bind(TexturesLoader.fxAvatarBinding(service, profile.getId(), 32));
-                    FXUtils.limitSize(portraitView, 32, 32);
-
-                    IconedItem accountItem = new IconedItem(portraitView, profile.getName());
-                    accountItem.setOnMouseClicked(e -> {
-                        selectedElyProfile = profile;
-                        latch.countDown();
-                    });
-                    listBox.add(accountItem);
-                }
-                Controllers.dialog(this);
-            });
-
-            try {
-                latch.await();
-
-                if (selectedElyProfile == null)
-                    throw new NoSelectedCharacterException();
-
-                return selectedElyProfile;
-            } catch (InterruptedException ignore) {
-                throw new NoSelectedCharacterException();
-            } finally {
-                FXUtils.runInFX(() -> Selector.this.fireEvent(new DialogCloseEvent()));
-            }
+        public ru.spark.slauncher.auth.ely.GameProfile select(ElyService elyService, List<ru.spark.slauncher.auth.ely.GameProfile> names) throws NoSelectedCharacterException {
+            return null;
         }
     }
 }
