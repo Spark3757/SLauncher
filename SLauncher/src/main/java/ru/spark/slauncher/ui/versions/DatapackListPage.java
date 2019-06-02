@@ -7,6 +7,7 @@ import javafx.scene.control.Skin;
 import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
 import ru.spark.slauncher.mod.Datapack;
+import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
@@ -63,7 +64,7 @@ public class DatapackListPage extends ListPageBase<DatapackListPageSkin.Datapack
     public void refresh() {
         setLoading(true);
         Task.of(datapack::loadFromDir)
-                .with(Task.of(() -> setLoading(false)))
+                .with(Task.of(Schedulers.javafx(), () -> setLoading(false)))
                 .start();
     }
 
