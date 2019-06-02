@@ -1,7 +1,6 @@
 package ru.spark.slauncher.ui;
 
 import javafx.application.Platform;
-import javafx.scene.layout.Region;
 import ru.spark.slauncher.event.EventBus;
 import ru.spark.slauncher.event.RefreshedVersionsEvent;
 import ru.spark.slauncher.game.ModpackHelper;
@@ -11,7 +10,6 @@ import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.setting.Profiles;
 import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.task.TaskExecutor;
 import ru.spark.slauncher.ui.account.AccountAdvancedListItem;
 import ru.spark.slauncher.ui.account.AddAccountPane;
 import ru.spark.slauncher.ui.construct.AdvancedListBox;
@@ -22,7 +20,6 @@ import ru.spark.slauncher.ui.versions.Versions;
 import ru.spark.slauncher.util.io.CompressingUtils;
 
 import java.io.File;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.ui.FXUtils.runInFX;
@@ -103,11 +100,10 @@ public final class LeftPaneController extends AdvancedListBox {
                     if (modpackFile.exists()) {
                         Task.ofResult(() -> CompressingUtils.findSuitableEncoding(modpackFile.toPath()))
                                 .thenApply(encoding -> ModpackHelper.readModpackManifest(modpackFile.toPath(), encoding))
-                                .thenAccept(modpack -> {
-                                    AtomicReference<Region> region = new AtomicReference<>();
-                                    TaskExecutor executor = ModpackHelper.getInstallTask(repository.getProfile(), modpackFile, modpack.getName(), modpack)
-                                            .with(Task.of(Schedulers.javafx(), this::checkAccount)).executor();
-                                    region.set(Controllers.taskDialog(executor, i18n("modpack.installing")));
+                                .thenApply(modpack -> ModpackHelper.getInstallTask(repository.getProfile(), modpackFile, modpack.getName(), modpack)
+                                        .with(Task.of(Schedulers.javafx(), this::checkAccount)).executor())
+                                .thenAccept(Schedulers.javafx(), executor -> {
+                                    Controllers.taskDialog(executor, i18n("modpack.installing"));
                                     executor.start();
                                 }).start();
                     }
