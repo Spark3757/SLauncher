@@ -86,7 +86,7 @@ public final class ExtendedProperties {
 
         InvalidationListener onTogglesChanged = any -> {
             Optional<T> pendingItem = pendingItemHolder.get();
-            if (pendingItem.isPresent()) {
+            if (pendingItem != null) {
                 itemSelector.accept(pendingItem.orElse(null));
             }
         };

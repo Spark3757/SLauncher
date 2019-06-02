@@ -115,20 +115,17 @@ public final class TexturesLoader {
     public static ObjectBinding<LoadedTexture> skinBinding(YggdrasilService service, UUID uuid) {
         LoadedTexture uuidFallback = getDefaultSkin(TextureModel.detectUUID(uuid));
         return BindingMapping.of(service.getProfileRepository().binding(uuid))
-                .map(profile -> profile
-                        .flatMap(it -> {
-                            try {
-                                return YggdrasilService.getTextures(it);
-                            } catch (ServerResponseMalformedException e) {
-                                LOG.log(Level.WARNING, "Failed to parse texture payload", e);
-                                return Optional.empty();
-                            }
-                        })
-                        .flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN)))
-                        .filter(it -> StringUtils.isNotBlank(it.getUrl())))
+                .map(profile -> profile.flatMap(it -> {
+                    try {
+                        return YggdrasilService.getTextures(it);
+                    } catch (ServerResponseMalformedException | NullPointerException e) {
+                        LOG.log(Level.WARNING, "Failed to parse texture payload", e);
+                        return Optional.empty();
+                    }
+                }).flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN))).filter(it -> StringUtils.isNotBlank(it.getUrl())))
                 .asyncMap(it -> {
                     if (it.isPresent()) {
-                        Texture texture = it.get();
+                        Texture texture = (Texture) it.get();
                         return CompletableFuture.supplyAsync(() -> {
                             try {
                                 return loadTexture(texture);
