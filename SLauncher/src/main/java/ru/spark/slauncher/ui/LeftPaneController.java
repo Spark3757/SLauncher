@@ -1,7 +1,6 @@
 package ru.spark.slauncher.ui;
 
 import javafx.application.Platform;
-import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import ru.spark.slauncher.event.EventBus;
 import ru.spark.slauncher.event.RefreshedVersionsEvent;
@@ -25,6 +24,7 @@ import ru.spark.slauncher.util.io.CompressingUtils;
 import java.io.File;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.ui.FXUtils.runInFX;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
@@ -55,12 +55,12 @@ public final class LeftPaneController extends AdvancedListBox {
         profileListItem.profileProperty().bind(Profiles.selectedProfileProperty());
 
         AdvancedListItem gameItem = new AdvancedListItem();
-        gameItem.setImage(new Image("/assets/img/bookshelf.png"));
+        gameItem.setImage(newImage("/assets/img/bookshelf.png"));
         gameItem.setTitle(i18n("version.manage"));
         gameItem.setOnAction(e -> Controllers.navigate(Controllers.getGameListPage()));
 
         AdvancedListItem launcherSettingsItem = new AdvancedListItem();
-        launcherSettingsItem.setImage(new Image("/assets/img/command.png"));
+        launcherSettingsItem.setImage(newImage("/assets/img/command.png"));
         launcherSettingsItem.setTitle(i18n("settings.launcher"));
         launcherSettingsItem.setOnAction(e -> Controllers.navigate(Controllers.getSettingsPage()));
 

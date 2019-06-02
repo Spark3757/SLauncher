@@ -17,6 +17,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.ScrollEvent;
@@ -29,6 +30,7 @@ import javafx.util.Duration;
 import javafx.util.StringConverter;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.javafx.ExtendedProperties;
@@ -461,6 +463,21 @@ public final class FXUtils {
         }
     }
 
+
+    /**
+     * Suppress IllegalArgumentException since the url is supposed to be correct definitely.
+     *
+     * @param url the url of image. The image resource should be a file within the jar.
+     * @return the image resource within the jar.
+     * @see ResourceNotFoundError
+     */
+    public static Image newImage(String url) {
+        try {
+            return new Image(url);
+        } catch (IllegalArgumentException e) {
+            throw new ResourceNotFoundError("Cannot access image: " + url, e);
+        }
+    }
     public static void applyDragListener(Node node, FileFilter filter, Consumer<List<File>> callback) {
         applyDragListener(node, filter, callback, null);
     }

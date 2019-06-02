@@ -12,6 +12,7 @@ import ru.spark.slauncher.auth.yggdrasil.*;
 import ru.spark.slauncher.task.FileDownloadTask;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.javafx.BindingMapping;
 
@@ -52,7 +53,7 @@ public final class TexturesLoader {
             loadDefaultSkin("/assets/img/steve.png", TextureModel.STEVE);
             loadDefaultSkin("/assets/img/alex.png", TextureModel.ALEX);
         } catch (UncheckedIOException e) {
-            throw new NoClassDefFoundError("Steve and alex default skin image is not found");
+            throw new ResourceNotFoundError("Steve and alex default skin image is not found");
         }
     }
 

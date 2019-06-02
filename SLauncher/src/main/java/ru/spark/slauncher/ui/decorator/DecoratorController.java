@@ -48,6 +48,7 @@ import java.util.logging.Level;
 
 import static java.util.stream.Collectors.toList;
 import static ru.spark.slauncher.setting.ConfigHolder.config;
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 
 public class DecoratorController {
     private static final String PROPERTY_DIALOG_CLOSE_HANDLER = DecoratorController.class.getName() + ".dialog.closeListener";
@@ -59,7 +60,7 @@ public class DecoratorController {
 
     private JFXDialog dialog;
     private StackContainerPane dialogPane;
-    private Image defaultBackground = new Image("/assets/img/background.jpg");
+    private Image defaultBackground = newImage("/assets/img/background.jpg");
 
     public DecoratorController(Stage stage, Node mainPage) {
         this.mainPage = mainPage;
@@ -79,7 +80,7 @@ public class DecoratorController {
         decorator.onRefreshNavButtonActionProperty().set(e -> refresh());
 
         welcomeView = new ImageView();
-        welcomeView.setImage(new Image("/assets/img/background.jpg"));
+        welcomeView.setImage(newImage("/assets/img/background.jpg"));
         welcomeView.setCursor(Cursor.HAND);
         FXUtils.limitSize(welcomeView, 796, 517);
         welcomeView.setOnMouseClicked(e -> {
@@ -188,7 +189,7 @@ public class DecoratorController {
     private Optional<Image> tryLoadImage(Path path) {
         if (Files.isRegularFile(path)) {
             try {
-                return Optional.of(new Image(path.toAbsolutePath().toUri().toString()));
+                return Optional.of(newImage(path.toAbsolutePath().toUri().toString()));
             } catch (IllegalArgumentException ignored) {
             }
         }

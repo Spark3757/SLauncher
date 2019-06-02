@@ -14,6 +14,8 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 
+import static ru.spark.slauncher.ui.FXUtils.newImage;
+
 public class SLauncherGameRepository extends DefaultGameRepository {
     private static final Gson GSON = new GsonBuilder()
             .setPrettyPrinting()
@@ -141,18 +143,18 @@ public class SLauncherGameRepository extends DefaultGameRepository {
 
     public Image getVersionIconImage(String id) {
         if (id == null || !isLoaded())
-            return new Image("/assets/img/grass.png");
+            return newImage("/assets/img/grass.png");
 
         Version version = getVersion(id);
         File iconFile = getVersionIconFile(id);
         if (iconFile.exists())
-            return new Image("file:" + iconFile.getAbsolutePath());
+            return newImage("file:" + iconFile.getAbsolutePath());
         else if ("net.minecraft.launchwrapper.Launch".equals(version.getMainClass()))
-            return new Image("/assets/img/furnace.png");
+            return newImage("/assets/img/furnace.png");
         else if ("cpw.mods.modlauncher.Launcher".equals(version.getMainClass()))
-            return new Image("/assets/img/furnace.png");
+            return newImage("/assets/img/furnace.png");
         else
-            return new Image("/assets/img/grass.png");
+            return newImage("/assets/img/grass.png");
     }
 
     public boolean saveVersionSetting(String id) {

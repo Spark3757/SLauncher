@@ -12,7 +12,6 @@ import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -40,6 +39,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class VersionSettingsPage extends StackPane implements DecoratorPage {
@@ -320,15 +320,15 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
     private void loadIcon() {
         if (versionId == null) {
-            iconPickerItem.setImage(new Image("/assets/img/grass.png"));
+            iconPickerItem.setImage(newImage("/assets/img/grass.png"));
             return;
         }
 
         File iconFile = profile.getRepository().getVersionIconFile(versionId);
         if (iconFile.exists())
-            iconPickerItem.setImage(new Image("file:" + iconFile.getAbsolutePath()));
+            iconPickerItem.setImage(newImage("file:" + iconFile.getAbsolutePath()));
         else
-            iconPickerItem.setImage(new Image("/assets/img/grass.png"));
+            iconPickerItem.setImage(newImage("/assets/img/grass.png"));
         FXUtils.limitSize(iconPickerItem.getImageView(), 32, 32);
     }
 

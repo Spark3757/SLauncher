@@ -1,12 +1,12 @@
 package ru.spark.slauncher.ui.versions;
 
-import javafx.scene.image.Image;
 import ru.spark.slauncher.setting.Profiles;
 import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
 import ru.spark.slauncher.ui.construct.AdvancedListItem;
 
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class GameAdvancedListItem extends AdvancedListItem {
@@ -21,7 +21,7 @@ public class GameAdvancedListItem extends AdvancedListItem {
             } else {
                 setTitle(i18n("version.empty"));
                 setSubtitle(i18n("version.empty.add"));
-                setImage(new Image("/assets/img/grass.png"));
+                setImage(newImage("/assets/img/grass.png"));
             }
         });
 

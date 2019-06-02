@@ -37,6 +37,7 @@ public class CrashReporter implements Thread.UncaughtExceptionHandler {
             put("Location is not set", I18n.i18n("crash.NoClassDefFound"));
             put("UnsatisfiedLinkError", I18n.i18n("crash.user_fault"));
             put("java.lang.NoClassDefFoundError", I18n.i18n("crash.NoClassDefFound"));
+            put("ru.spark.slauncher.util.ResourceNotFoundError", I18n.i18n("crash.NoClassDefFound"));
             put("java.lang.VerifyError", I18n.i18n("crash.NoClassDefFound"));
             put("java.lang.NoSuchMethodError", I18n.i18n("crash.NoClassDefFound"));
             put("java.lang.NoSuchFieldError", I18n.i18n("crash.NoClassDefFound"));

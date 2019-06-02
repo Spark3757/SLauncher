@@ -3,7 +3,6 @@ package ru.spark.slauncher.ui.account;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.scene.image.Image;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.ely.ElyAccount;
 import ru.spark.slauncher.auth.offline.OfflineAccount;
@@ -13,6 +12,7 @@ import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.SVG;
 import ru.spark.slauncher.ui.construct.AdvancedListItem;
 
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AccountAdvancedListItem extends AdvancedListItem {
@@ -26,7 +26,7 @@ public class AccountAdvancedListItem extends AdvancedListItem {
                 setTitle(i18n("account.missing"));
                 setSubtitle(i18n("account.missing.add"));
                 imageProperty().unbind();
-                setImage(new Image("/assets/img/craft_table.png"));
+                setImage(newImage("/assets/img/craft_table.png"));
             } else {
                 titleProperty().bind(Bindings.createStringBinding(account::getCharacter, account));
                 setSubtitle(accountSubtitle(account));

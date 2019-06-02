@@ -2,7 +2,6 @@ package ru.spark.slauncher.ui;
 
 import javafx.scene.Node;
 import javafx.scene.Scene;
-import javafx.scene.image.Image;
 import javafx.scene.layout.Region;
 import javafx.stage.Stage;
 import ru.spark.slauncher.Launcher;
@@ -43,6 +42,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static ru.spark.slauncher.setting.ConfigHolder.config;
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.ui.FXUtils.runInFX;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
@@ -196,7 +196,7 @@ public final class Controllers {
         scene = new Scene(decorator.getDecorator(), 800, 519);
         scene.getStylesheets().setAll(config().getTheme().getStylesheets());
 
-        stage.getIcons().add(new Image("/assets/img/icon.png"));
+        stage.getIcons().add(newImage("/assets/img/icon.png"));
         stage.setTitle(Metadata.TITLE);
     }
 

@@ -5,7 +5,6 @@ import com.jfoenix.controls.JFXRadioButton;
 import com.jfoenix.effects.JFXDepthManager;
 import javafx.geometry.Pos;
 import javafx.scene.control.SkinBase;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -13,6 +12,8 @@ import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
 import ru.spark.slauncher.ui.construct.TwoLineListItem;
+
+import static ru.spark.slauncher.ui.FXUtils.newImage;
 
 public class ProfileListItemSkin extends SkinBase<ProfileListItem> {
 
@@ -37,7 +38,7 @@ public class ProfileListItemSkin extends SkinBase<ProfileListItem> {
 
         ImageView imageView = new ImageView();
         FXUtils.limitSize(imageView, 32, 32);
-        imageView.imageProperty().set(new Image("/assets/img/craft_table.png"));
+        imageView.imageProperty().set(newImage("/assets/img/craft_table.png"));
 
         TwoLineListItem item = new TwoLineListItem();
         BorderPane.setAlignment(item, Pos.CENTER);
