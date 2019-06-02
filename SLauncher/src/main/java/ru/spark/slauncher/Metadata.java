@@ -8,7 +8,7 @@ import java.nio.file.Path;
  * Stores metadata about this application.
  */
 public final class Metadata {
-    public static final String VERSION = "3.2.2";
+    public static final String VERSION = "3.2.1";
     public static final String NAME = "SLauncher";
     public static final String TITLE = NAME + " " + VERSION;
     public static final String UPDATE_URL = System.getProperty("slauncher.update_source.override", "http://update.slauncher.ru/update_link");

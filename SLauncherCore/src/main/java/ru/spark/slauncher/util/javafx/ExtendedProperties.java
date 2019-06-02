@@ -6,13 +6,14 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.collections.ObservableList;
 import javafx.scene.control.*;
-import ru.spark.slauncher.util.Pair;
 
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import static ru.spark.slauncher.util.Pair.pair;
 
 /**
  * @author Spark1337
@@ -21,9 +22,6 @@ public final class ExtendedProperties {
 
     private static final String PROP_PREFIX = ExtendedProperties.class.getName();
 
-    private ExtendedProperties() {
-    }
-
     // ==== ComboBox ====
     @SuppressWarnings("unchecked")
     public static <T> ObjectProperty<T> selectedItemPropertyFor(ComboBox<T> comboBox) {
@@ -31,7 +29,6 @@ public final class ExtendedProperties {
                 PROP_PREFIX + ".comboxBox.selectedItem",
                 any -> createPropertyForSelectionModel(comboBox, comboBox.selectionModelProperty()));
     }
-    // ====
 
     private static <T> ObjectProperty<T> createPropertyForSelectionModel(Object bean, Property<? extends SelectionModel<T>> modelProperty) {
         return new ReadWriteComposedProperty<>(bean, "extra.selectedItem",
@@ -39,6 +36,7 @@ public final class ExtendedProperties {
                         .flatMap(SelectionModel::selectedItemProperty),
                 obj -> modelProperty.getValue().select(obj));
     }
+    // ====
 
     // ==== Toggle ====
     @SuppressWarnings("unchecked")
@@ -58,15 +56,8 @@ public final class ExtendedProperties {
         return selectedItemPropertyFor(new AutomatedToggleGroup(items), userdataType);
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> ObjectProperty<T> selectedItemPropertyFor(ToggleGroup toggleGroup, Class<T> userdataType) {
-        return (ObjectProperty<T>) toggleGroup.getProperties().computeIfAbsent(
-                Pair.pair(PROP_PREFIX + ".toggleGroup.selectedItem", userdataType),
-                any -> createMappedPropertyForToggleGroup(
-                        toggleGroup,
-                        toggle -> toggle == null ? null : userdataType.cast(toggle.getUserData())));
+    private ExtendedProperties() {
     }
-    // ====
 
     private static <T> ObjectProperty<T> createMappedPropertyForToggleGroup(ToggleGroup toggleGroup, Function<Toggle, T> mapper) {
         ObjectProperty<Toggle> selectedToggle = selectedTogglePropertyFor(toggleGroup);
@@ -113,5 +104,15 @@ public final class ExtendedProperties {
                 PROP_PREFIX + ".checkbox.reservedSelected",
                 any -> new MappedProperty<>(checkbox, "ext.reservedSelected",
                         checkbox.selectedProperty(), it -> !it, it -> !it));
+    }
+    // ====
+
+    @SuppressWarnings("unchecked")
+    public static <T> ObjectProperty<T> selectedItemPropertyFor(ToggleGroup toggleGroup, Class<T> userdataType) {
+        return (ObjectProperty<T>) toggleGroup.getProperties().computeIfAbsent(
+                pair(PROP_PREFIX + ".toggleGroup.selectedItem", userdataType),
+                any -> createMappedPropertyForToggleGroup(
+                        toggleGroup,
+                        toggle -> toggle == null ? null : userdataType.cast(toggle.getUserData())));
     }
 }
