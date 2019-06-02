@@ -125,6 +125,7 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
         try {
             modManager.removeMods(selectedItems.stream()
                     .map(TreeItem::getValue)
+                    .filter(Objects::nonNull)
                     .map(ModListPageSkin.ModInfoObject::getModInfo)
                     .toArray(ModInfo[]::new));
             loadMods(modManager);
