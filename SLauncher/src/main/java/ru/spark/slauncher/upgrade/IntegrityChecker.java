@@ -15,6 +15,7 @@ import java.security.spec.X509EncodedKeySpec;
  *
  * @author Spark1337
  */
+@Deprecated
 public final class IntegrityChecker {
     private static final String SIGNATURE_FILE = "META-INF/slauncher_signature";
     private static final String PUBLIC_KEY_FILE = "assets/slauncher_signature_publickey.der";

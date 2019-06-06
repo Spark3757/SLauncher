@@ -156,7 +156,7 @@ public class DefaultGameRepository implements GameRepository {
                 return true;
             }
 
-            // remove json files first to ensure HMCL will not recognize this folder as a valid version.
+            // remove json files first to ensure we will not recognize this folder as a valid version.
             List<File> jsons = FileUtils.listFilesByExtension(removedFile, "json");
             jsons.forEach(f -> {
                 if (!f.delete())

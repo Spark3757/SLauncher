@@ -56,8 +56,21 @@ public class Analytics {
                 build());
     }
 
-    public static void recordLauncherCrash(Throwable throwable) {
-        Sentry.capture(throwable);
+    public static void recordLauncherCrash(Thread thread, String crashMessage) {
+        Sentry.capture(new EventBuilder().
+                withRelease(Metadata.VERSION).
+                withLevel(Event.Level.ERROR).
+                withMessage("launcher_crashed").
+                withTag("version", Metadata.VERSION).
+                withTag("thread", thread.toString()).
+                withTag("stackTrace", crashMessage).
+                withTag("os", System.getProperty("os.name") + ' ' + OperatingSystem.SYSTEM_VERSION).
+                withTag("java_version", System.getProperty("java.version")).
+                withTag("java_vm_version", System.getProperty("java.vm.name") + " (" + System.getProperty("java.vm.info") + "), ").
+                withTag("jvm_max_memory", Runtime.getRuntime().maxMemory() + "").
+                withTag("jvm_total_memory", Runtime.getRuntime().totalMemory() + "").
+                withTag("jvm_free_memory", Runtime.getRuntime().freeMemory() + "").
+                build());
     }
 
 

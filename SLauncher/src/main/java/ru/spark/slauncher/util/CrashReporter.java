@@ -1,20 +1,14 @@
 package ru.spark.slauncher.util;
 
-import io.sentry.Sentry;
-import io.sentry.event.Event;
-import io.sentry.event.EventBuilder;
 import javafx.application.Platform;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.ui.CrashWindow;
-import ru.spark.slauncher.upgrade.IntegrityChecker;
 import ru.spark.slauncher.upgrade.UpdateChecker;
 import ru.spark.slauncher.util.i18n.I18n;
-import ru.spark.slauncher.util.io.NetworkUtils;
 import ru.spark.slauncher.util.platform.OperatingSystem;
 
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -102,44 +96,12 @@ public class CrashReporter implements Thread.UncaughtExceptionHandler {
 
             if (checkThrowable(e)) {
                 Platform.runLater(() -> new CrashWindow(text).show());
-                if (!UpdateChecker.isOutdated() && IntegrityChecker.isSelfVerified()) {
-                    //reportToServer(text);
-                    Sentry.capture(new EventBuilder().
-                            withRelease(Metadata.VERSION).
-                            withLevel(Event.Level.ERROR).
-                            withMessage("launcher_crashed").
-                            withTag("version", Metadata.VERSION).
-                            withTag("thread", t.toString()).
-                            withTag("stackTrace", stackTrace).
-                            withTag("os", System.getProperty("os.name") + ' ' + OperatingSystem.SYSTEM_VERSION).
-                            withTag("java_version", System.getProperty("java.version")).
-                            withTag("java_vm_version", System.getProperty("java.vm.name") + " (" + System.getProperty("java.vm.info") + "), ").
-                            withTag("jvm_max_memory", Runtime.getRuntime().maxMemory() + "").
-                            withTag("jvm_total_memory", Runtime.getRuntime().totalMemory() + "").
-                            withTag("jvm_free_memory", Runtime.getRuntime().freeMemory() + "").
-                            build());
+                if (!UpdateChecker.isOutdated()) {
+                    Analytics.recordLauncherCrash(t, text);
                 }
             }
         } catch (Throwable handlingException) {
             Logging.LOG.log(Level.SEVERE, "Unable to handle uncaught exception", handlingException);
         }
-    }
-
-    private void reportToServer(final String text) {
-        Thread t = new Thread(() -> {
-            HashMap<String, String> map = new HashMap<>();
-            map.put("crash_report", text);
-            map.put("version", Metadata.VERSION);
-            map.put("log", Logging.getLogs());
-            try {
-                String response = NetworkUtils.doPost(NetworkUtils.toURL("https://slauncher.ru/crash.php"), map);
-                if (StringUtils.isNotBlank(response))
-                    Logging.LOG.log(Level.SEVERE, "Crash server response: " + response);
-            } catch (IOException ex) {
-                Logging.LOG.log(Level.SEVERE, "Unable to post SLauncher server.", ex);
-            }
-        });
-        t.setDaemon(true);
-        t.start();
     }
 }
