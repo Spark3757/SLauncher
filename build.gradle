@@ -9,7 +9,7 @@ buildscript {
 }
 
 group 'ru.spark'
-version '3.2.3'
+version '3.2.4'
 
 subprojects {
     apply plugin: 'java'

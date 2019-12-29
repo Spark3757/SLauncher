@@ -486,7 +486,8 @@ public final class VersionSetting {
                 .setVersionName(Metadata.TITLE)
                 .setProfileName(Metadata.TITLE)
                 .setMinecraftArgs(getMinecraftArgs())
-                .setJavaArgs("-javaagent:" + OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar " + getJavaArgs())
+                .setJavaArgs(Paths.get(OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar").toFile().exists() ?
+                        "-javaagent:" + OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar " + getJavaArgs() : getJavaArgs())
                 .setMaxMemory(getMaxMemory())
                 .setMinMemory(getMinMemory())
                 .setMetaspace(Lang.toIntOrNull(getPermSize()))
