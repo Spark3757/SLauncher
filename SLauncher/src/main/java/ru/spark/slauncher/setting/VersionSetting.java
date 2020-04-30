@@ -5,25 +5,28 @@ import com.google.gson.annotations.JsonAdapter;
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.*;
 import ru.spark.slauncher.Metadata;
+import ru.spark.slauncher.game.GameDirectoryType;
 import ru.spark.slauncher.game.LaunchOptions;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.platform.JavaVersion;
 import ru.spark.slauncher.util.platform.OperatingSystem;
+import ru.spark.slauncher.util.platform.Platform;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(VersionSetting.Serializer.class)
-public final class VersionSetting {
+public final class VersionSetting implements Cloneable {
 
     private final BooleanProperty usesGlobalProperty = new SimpleBooleanProperty(this, "usesGlobal", false);
     private final StringProperty javaProperty = new SimpleStringProperty(this, "java", "");
@@ -53,7 +56,7 @@ public final class VersionSetting {
      * 0 - .minecraft<br/>
      * 1 - .minecraft/versions/&lt;version&gt;/<br/>
      */
-    private final ObjectProperty<EnumGameDirectory> gameDirTypeProperty = new SimpleObjectProperty<>(this, "gameDirType", EnumGameDirectory.ROOT_FOLDER);
+    private final ObjectProperty<GameDirectoryType> gameDirTypeProperty = new SimpleObjectProperty<>(this, "gameDirType", GameDirectoryType.ROOT_FOLDER);
     /**
      * Your custom gameDir
      */
@@ -383,15 +386,15 @@ public final class VersionSetting {
         heightProperty.set(height);
     }
 
-    public ObjectProperty<EnumGameDirectory> gameDirTypeProperty() {
+    public ObjectProperty<GameDirectoryType> gameDirTypeProperty() {
         return gameDirTypeProperty;
     }
 
-    public EnumGameDirectory getGameDirType() {
+    public GameDirectoryType getGameDirType() {
         return gameDirTypeProperty.get();
     }
 
-    public void setGameDirType(EnumGameDirectory gameDirType) {
+    public void setGameDirType(GameDirectoryType gameDirType) {
         gameDirTypeProperty.set(gameDirType);
     }
 
@@ -422,14 +425,26 @@ public final class VersionSetting {
     }
 
     public JavaVersion getJavaVersion() throws InterruptedException {
+        return getJavaVersion(true);
+    }
+
+    public void setJavaVersion(JavaVersion java) {
+        setJava(java.getVersion());
+        setDefaultJavaPath(java.getBinary().toString());
+    }
+
+    public JavaVersion getJavaVersion(boolean checkJava) throws InterruptedException {
         // TODO: lazy initialization may result in UI suspension.
         if (StringUtils.isBlank(getJava()))
             setJava(StringUtils.isBlank(getJavaDir()) ? "Default" : "Custom");
         if ("Default".equals(getJava())) return JavaVersion.fromCurrentEnvironment();
         else if (isUsesCustomJavaDir()) {
             try {
-                return JavaVersion.fromExecutable(Paths.get(getJavaDir()));
-            } catch (IOException e) {
+                if (checkJava)
+                    return JavaVersion.fromExecutable(Paths.get(getJavaDir()));
+                else
+                    return new JavaVersion(Paths.get(getJavaDir()), "", Platform.PLATFORM);
+            } catch (IOException | InvalidPathException e) {
                 return null; // Custom Java Directory not found,
             }
         } else if (StringUtils.isNotBlank(getJava())) {
@@ -446,11 +461,6 @@ public final class VersionSetting {
                         .orElse(matchedJava.get(0));
             }
         } else throw new Error();
-    }
-
-    public void setJavaVersion(JavaVersion java) {
-        setJava(java.getVersion());
-        setDefaultJavaPath(java.getBinary().toString());
     }
 
     public void addPropertyChangedListener(InvalidationListener listener) {
@@ -478,12 +488,13 @@ public final class VersionSetting {
         defaultJavaPathProperty.addListener(listener);
     }
 
-    public LaunchOptions toLaunchOptions(File gameDir) throws InterruptedException {
-        JavaVersion javaVersion = Optional.ofNullable(getJavaVersion()).orElse(JavaVersion.fromCurrentEnvironment());
+    public LaunchOptions toLaunchOptions(File gameDir, boolean checkJava) throws InterruptedException {
+        JavaVersion javaVersion = Optional.ofNullable(getJavaVersion(checkJava)).orElse(JavaVersion.fromCurrentEnvironment());
         LaunchOptions.Builder builder = new LaunchOptions.Builder()
                 .setGameDir(gameDir)
                 .setJava(javaVersion)
                 .setVersionName(Metadata.TITLE)
+                .setVersionType(Metadata.TITLE)
                 .setProfileName(Metadata.TITLE)
                 .setMinecraftArgs(getMinecraftArgs())
                 .setJavaArgs(Paths.get(OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar").toFile().exists() ?
@@ -507,6 +518,34 @@ public final class VersionSetting {
             }
         }
         return builder.create();
+    }
+
+    @Override
+    public VersionSetting clone() {
+        VersionSetting versionSetting = new VersionSetting();
+        versionSetting.setUsesGlobal(isUsesGlobal());
+        versionSetting.setJava(getJava());
+        versionSetting.setDefaultJavaPath(getDefaultJavaPath());
+        versionSetting.setJavaDir(getJavaDir());
+        versionSetting.setWrapper(getWrapper());
+        versionSetting.setPermSize(getPermSize());
+        versionSetting.setMaxMemory(getMaxMemory());
+        versionSetting.setMinMemory(getMinMemory());
+        versionSetting.setPreLaunchCommand(getPreLaunchCommand());
+        versionSetting.setJavaArgs(getJavaArgs());
+        versionSetting.setMinecraftArgs(getMinecraftArgs());
+        versionSetting.setNoJVMArgs(isNoJVMArgs());
+        versionSetting.setNotCheckGame(isNotCheckGame());
+        versionSetting.setNotCheckJVM(isNotCheckJVM());
+        versionSetting.setShowLogs(isShowLogs());
+        versionSetting.setServerIp(getServerIp());
+        versionSetting.setFullscreen(isFullscreen());
+        versionSetting.setWidth(getWidth());
+        versionSetting.setHeight(getHeight());
+        versionSetting.setGameDirType(getGameDirType());
+        versionSetting.setGameDir(getGameDir());
+        versionSetting.setLauncherVisibility(getLauncherVisibility());
+        return versionSetting;
     }
 
     public static class Serializer implements JsonSerializer<VersionSetting>, JsonDeserializer<VersionSetting> {
@@ -543,7 +582,7 @@ public final class VersionSetting {
 
         @Override
         public VersionSetting deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            if (json == null || json == JsonNull.INSTANCE || !(json instanceof JsonObject))
+            if (json == JsonNull.INSTANCE || !(json instanceof JsonObject))
                 return null;
             JsonObject obj = (JsonObject) json;
 
@@ -572,7 +611,7 @@ public final class VersionSetting {
             vs.setNotCheckJVM(Optional.ofNullable(obj.get("notCheckJVM")).map(JsonElement::getAsBoolean).orElse(false));
             vs.setShowLogs(Optional.ofNullable(obj.get("showLogs")).map(JsonElement::getAsBoolean).orElse(false));
             vs.setLauncherVisibility(LauncherVisibility.values()[Optional.ofNullable(obj.get("launcherVisibility")).map(JsonElement::getAsInt).orElse(1)]);
-            vs.setGameDirType(EnumGameDirectory.values()[Optional.ofNullable(obj.get("gameDirType")).map(JsonElement::getAsInt).orElse(0)]);
+            vs.setGameDirType(GameDirectoryType.values()[Optional.ofNullable(obj.get("gameDirType")).map(JsonElement::getAsInt).orElse(0)]);
             vs.setDefaultJavaPath(Optional.ofNullable(obj.get("defaultJavaPath")).map(JsonElement::getAsString).orElse(null));
 
             return vs;

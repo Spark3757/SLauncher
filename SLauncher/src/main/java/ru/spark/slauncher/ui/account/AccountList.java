@@ -6,13 +6,12 @@ import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.ListPage;
 import ru.spark.slauncher.ui.decorator.DecoratorPage;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.ExtendedProperties;
 import ru.spark.slauncher.util.javafx.MappedObservableList;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
 public class AccountList extends ListPage<AccountListItem> implements DecoratorPage {
-    private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper(this, "title", i18n("account.manage"));
+    private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(State.fromTitle(I18n.i18n("account.manage")));
     private final ListProperty<Account> accounts = new SimpleListProperty<>(this, "accounts", FXCollections.observableArrayList());
     private final ObjectProperty<Account> selectedAccount;
 
@@ -35,7 +34,7 @@ public class AccountList extends ListPage<AccountListItem> implements DecoratorP
     }
 
     @Override
-    public ReadOnlyStringProperty titleProperty() {
-        return title.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<State> stateProperty() {
+        return state.getReadOnlyProperty();
     }
 }

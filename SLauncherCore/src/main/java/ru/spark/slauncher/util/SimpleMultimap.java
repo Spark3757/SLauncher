@@ -9,7 +9,7 @@ import java.util.function.Supplier;
  * A simple implementation of Multimap.
  * Just a combination of map and set.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public final class SimpleMultimap<K, V> {
 

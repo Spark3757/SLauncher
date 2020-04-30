@@ -15,10 +15,7 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.FileAlreadyExistsException;
-import java.nio.file.FileSystem;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -43,33 +40,6 @@ public class World {
             loadFromZip();
         else
             throw new IOException("Path " + file + " cannot be recognized as a Minecraft world");
-    }
-
-    private static CompoundTag parseLevelDat(Path path) throws IOException {
-        try (InputStream is = new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path)))) {
-            Tag nbt = NBTIO.readTag(is);
-            if (nbt instanceof CompoundTag)
-                return (CompoundTag) nbt;
-            else
-                throw new IOException("level.dat malformed");
-        }
-    }
-
-    public static Stream<World> getWorlds(Path savesDir) {
-        try {
-            if (Files.exists(savesDir))
-                return Files.list(savesDir).flatMap(world -> {
-                    try {
-                        return Stream.of(new World(world));
-                    } catch (IOException | IllegalArgumentException e) {
-                        Logging.LOG.log(Level.WARNING, "Failed to read world " + world, e);
-                        return Stream.empty();
-                    }
-                });
-        } catch (IOException e) {
-            Logging.LOG.log(Level.WARNING, "Failed to read saves", e);
-        }
-        return Stream.empty();
     }
 
     private void loadFromDirectory() throws IOException {
@@ -101,7 +71,7 @@ public class World {
     private void loadFromZipImpl(Path root) throws IOException {
         Path levelDat = root.resolve("level.dat");
         if (!Files.exists(levelDat))
-            throw new IllegalArgumentException("Not a valid world zip file since level.dat cannot be found.");
+            throw new IOException("Not a valid world zip file since level.dat cannot be found.");
 
         getWorldName(levelDat);
     }
@@ -115,10 +85,12 @@ public class World {
                 return;
             }
 
-            Path root = Files.list(fs.getPath("/")).filter(Files::isDirectory).findAny()
-                    .orElseThrow(() -> new IOException("Not a valid world zip file"));
-            fileName = FileUtils.getName(root);
-            loadFromZipImpl(root);
+            try (Stream<Path> stream = Files.list(fs.getPath("/"))) {
+                Path root = stream.filter(Files::isDirectory).findAny()
+                        .orElseThrow(() -> new IOException("Not a valid world zip file"));
+                fileName = FileUtils.getName(root);
+                loadFromZipImpl(root);
+            }
         }
     }
 
@@ -126,6 +98,9 @@ public class World {
         CompoundTag nbt = parseLevelDat(levelDat);
 
         CompoundTag data = nbt.get("Data");
+        if (data == null)
+            throw new IOException("level.dat missing Data");
+
         if (data.get("LevelName") instanceof StringTag)
             worldName = data.<StringTag>get("LevelName").getValue();
         else
@@ -164,7 +139,13 @@ public class World {
     }
 
     public void install(Path savesDir, String name) throws IOException {
-        Path worldDir = savesDir.resolve(name);
+        Path worldDir;
+        try {
+            worldDir = savesDir.resolve(name);
+        } catch (InvalidPathException e) {
+            throw new IOException(e);
+        }
+
         if (Files.isDirectory(worldDir)) {
             throw new FileAlreadyExistsException("World already exists");
         }
@@ -177,14 +158,16 @@ public class World {
 
                     new Unzipper(file, worldDir).unzip();
                 } else {
-                    List<Path> subDirs = Files.list(fs.getPath("/")).collect(Collectors.toList());
-                    if (subDirs.size() != 1) {
-                        throw new IOException("World zip malformed");
+                    try (Stream<Path> stream = Files.list(fs.getPath("/"))) {
+                        List<Path> subDirs = stream.collect(Collectors.toList());
+                        if (subDirs.size() != 1) {
+                            throw new IOException("World zip malformed");
+                        }
+                        String subDirectoryName = FileUtils.getName(subDirs.get(0));
+                        new Unzipper(file, worldDir)
+                                .setSubDirectory("/" + subDirectoryName + "/")
+                                .unzip();
                     }
-                    String subDirectoryName = FileUtils.getName(subDirs.get(0));
-                    new Unzipper(file, worldDir)
-                            .setSubDirectory("/" + subDirectoryName + "/")
-                            .unzip();
                 }
 
             }
@@ -201,5 +184,33 @@ public class World {
         try (Zipper zipper = new Zipper(zip)) {
             zipper.putDirectory(file, "/" + worldName + "/");
         }
+    }
+
+    private static CompoundTag parseLevelDat(Path path) throws IOException {
+        try (InputStream is = new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path)))) {
+            Tag nbt = NBTIO.readTag(is);
+            if (nbt instanceof CompoundTag)
+                return (CompoundTag) nbt;
+            else
+                throw new IOException("level.dat malformed");
+        }
+    }
+
+    public static Stream<World> getWorlds(Path savesDir) {
+        try {
+            if (Files.exists(savesDir)) {
+                return Files.list(savesDir).flatMap(world -> {
+                    try {
+                        return Stream.of(new World(world));
+                    } catch (IOException e) {
+                        Logging.LOG.log(Level.WARNING, "Failed to read world " + world, e);
+                        return Stream.empty();
+                    }
+                });
+            }
+        } catch (IOException e) {
+            Logging.LOG.log(Level.WARNING, "Failed to read saves", e);
+        }
+        return Stream.empty();
     }
 }

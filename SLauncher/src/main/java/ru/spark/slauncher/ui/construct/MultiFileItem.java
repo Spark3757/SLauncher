@@ -22,17 +22,16 @@ import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.io.File;
 import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
-public class MultiFileItem<T> extends ComponentList {
-    private final StringProperty customTitle = new SimpleStringProperty(this, "customTitle", i18n("selector.custom"));
-    private final StringProperty chooserTitle = new SimpleStringProperty(this, "chooserTitle", i18n("selector.choose_file"));
+public class MultiFileItem<T> extends ComponentSublist {
+    private final StringProperty customTitle = new SimpleStringProperty(this, "customTitle", I18n.i18n("selector.custom"));
+    private final StringProperty chooserTitle = new SimpleStringProperty(this, "chooserTitle", I18n.i18n("selector.choose_file"));
     private final BooleanProperty directory = new SimpleBooleanProperty(this, "directory", false);
     private final ObjectProperty<T> selectedData = new SimpleObjectProperty<>(this, "selectedData");
     private final ObjectProperty<T> fallbackData = new SimpleObjectProperty<>(this, "fallbackData");
@@ -158,24 +157,24 @@ public class MultiFileItem<T> extends ComponentList {
         return customTitle.get();
     }
 
-    public void setCustomTitle(String customTitle) {
-        this.customTitle.set(customTitle);
-    }
-
     public StringProperty customTitleProperty() {
         return customTitle;
+    }
+
+    public void setCustomTitle(String customTitle) {
+        this.customTitle.set(customTitle);
     }
 
     public String getChooserTitle() {
         return chooserTitle.get();
     }
 
-    public void setChooserTitle(String chooserTitle) {
-        this.chooserTitle.set(chooserTitle);
-    }
-
     public StringProperty chooserTitleProperty() {
         return chooserTitle;
+    }
+
+    public void setChooserTitle(String chooserTitle) {
+        this.chooserTitle.set(chooserTitle);
     }
 
     public void setCustomUserData(T userData) {
@@ -210,12 +209,12 @@ public class MultiFileItem<T> extends ComponentList {
         return directory.get();
     }
 
-    public void setDirectory(boolean directory) {
-        this.directory.set(directory);
-    }
-
     public BooleanProperty directoryProperty() {
         return directory;
+    }
+
+    public void setDirectory(boolean directory) {
+        this.directory.set(directory);
     }
 
     public ObservableList<FileChooser.ExtensionFilter> getExtensionFilters() {
@@ -226,23 +225,23 @@ public class MultiFileItem<T> extends ComponentList {
         return selectedData.get();
     }
 
-    public void setSelectedData(T selectedData) {
-        this.selectedData.set(selectedData);
-    }
-
     public ObjectProperty<T> selectedDataProperty() {
         return selectedData;
+    }
+
+    public void setSelectedData(T selectedData) {
+        this.selectedData.set(selectedData);
     }
 
     public T getFallbackData() {
         return fallbackData.get();
     }
 
-    public void setFallbackData(T fallbackData) {
-        this.fallbackData.set(fallbackData);
-    }
-
     public ObjectProperty<T> fallbackDataProperty() {
         return fallbackData;
+    }
+
+    public void setFallbackData(T fallbackData) {
+        this.fallbackData.set(fallbackData);
     }
 }

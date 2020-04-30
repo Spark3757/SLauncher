@@ -6,14 +6,13 @@ import ru.spark.slauncher.auth.CharacterSelector;
 import ru.spark.slauncher.auth.yggdrasil.CompleteGameProfile;
 import ru.spark.slauncher.auth.yggdrasil.GameProfile;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilSession;
+import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.javafx.ObservableOptionalCache;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
-
-import static ru.spark.slauncher.util.Lang.tryCast;
 
 public class AuthlibInjectorAccountFactory extends AccountFactory<AuthlibInjectorAccount> {
     private AuthlibInjectorArtifactProvider downloader;
@@ -44,14 +43,14 @@ public class AuthlibInjectorAccountFactory extends AccountFactory<AuthlibInjecto
 
         YggdrasilSession session = YggdrasilSession.fromStorage(storage);
 
-        String username = tryCast(storage.get("username"), String.class)
+        String username = Lang.tryCast(storage.get("username"), String.class)
                 .orElseThrow(() -> new IllegalArgumentException("storage does not have username"));
-        String apiRoot = tryCast(storage.get("serverBaseURL"), String.class)
+        String apiRoot = Lang.tryCast(storage.get("serverBaseURL"), String.class)
                 .orElseThrow(() -> new IllegalArgumentException("storage does not have API root."));
 
         AuthlibInjectorServer server = serverLookup.apply(apiRoot);
 
-        tryCast(storage.get("profileProperties"), Map.class).ifPresent(
+        Lang.tryCast(storage.get("profileProperties"), Map.class).ifPresent(
                 it -> {
                     @SuppressWarnings("unchecked")
                     Map<String, String> properties = it;

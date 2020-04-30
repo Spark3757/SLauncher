@@ -1,14 +1,17 @@
 package ru.spark.slauncher.util.platform;
 
+import ru.spark.slauncher.launch.ExitWaiter;
+import ru.spark.slauncher.launch.StreamPump;
+
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * The managed process.
  *
- * @author Spark1337
- * @see ru.spark.slauncher.launch.ExitWaiter
- * @see ru.spark.slauncher.launch.StreamPump
+ * @author spark1337
+ * @see ExitWaiter
+ * @see StreamPump
  */
 public class ManagedProcess {
 

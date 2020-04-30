@@ -5,10 +5,11 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.layout.*?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<?import ru.spark.slauncher.ui.animation.TransitionPane?>
+<fx:root xmlns="http://javafx.com/javafx"
          type="StackPane"
-         style="-fx-background-color: gray;">
+         style="-fx-background-color: gray;"
+         xmlns:fx="http://javafx.com/fxml">
     <VBox>
         <JFXToolbar fx:id="toolbar" styleClass="jfx-tool-bar">
             <leftItems>
@@ -43,6 +44,6 @@
             </rightItems>
         </JFXToolbar>
 
-        <StackPane fx:id="root"/>
+        <TransitionPane fx:id="root"/>
     </VBox>
 </fx:root>

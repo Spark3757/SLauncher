@@ -3,9 +3,25 @@ package ru.spark.slauncher;
 import ru.spark.slauncher.upgrade.UpdateHandler;
 import ru.spark.slauncher.util.Logging;
 
+import javax.net.ssl.*;
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
+import java.util.Collections;
+import java.util.logging.Level;
 
+import static ru.spark.slauncher.util.Lang.thread;
+import static ru.spark.slauncher.util.Logging.LOG;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class Main {
@@ -18,9 +34,13 @@ public final class Main {
         checkJavaFX();
         checkDirectoryPath();
 
+        // This environment check will take ~300ms
+        thread(() -> {
+            fixLetsEncrypt();
+            checkDSTRootCAX3();
+        }, "CA Certificate Check", true);
 
-        Logging.start(Metadata.SLauncher_DIRECTORY.resolve("logs"));
-
+        Logging.start(Metadata.SL_DIRECTORY.resolve("logs"));
 
         if (UpdateHandler.processArguments(args)) {
             return;
@@ -46,6 +66,27 @@ public final class Main {
         }
     }
 
+    private static void checkDSTRootCAX3() {
+        TrustManagerFactory tmf;
+        try {
+            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmf.init((KeyStore) null);
+        } catch (NoSuchAlgorithmException | KeyStoreException e) {
+            LOG.log(Level.WARNING, "Failed to init TrustManagerFactory", e);
+            // don't know what to do here
+            return;
+        }
+        for (TrustManager tm : tmf.getTrustManagers()) {
+            if (tm instanceof X509TrustManager) {
+                for (X509Certificate cert : ((X509TrustManager) tm).getAcceptedIssuers()) {
+                    if ("CN=DST Root CA X3, O=Digital Signature Trust Co.".equals((cert.getSubjectDN().getName()))) {
+                        return;
+                    }
+                }
+            }
+        }
+        showWarningAndContinue(i18n("fatal.missing_dst_root_ca_x3"));
+    }
 
     /**
      * Indicates that a fatal error has occurred, and that the application cannot start.
@@ -66,4 +107,34 @@ public final class Main {
         JOptionPane.showMessageDialog(null, message, "Warning", JOptionPane.WARNING_MESSAGE);
     }
 
+    static void fixLetsEncrypt() {
+        try {
+            KeyStore defaultKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            Path ksPath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
+
+            try (InputStream ksStream = Files.newInputStream(ksPath)) {
+                defaultKeyStore.load(ksStream, "changeit".toCharArray());
+            }
+
+            KeyStore letsEncryptKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            InputStream letsEncryptFile = Main.class.getResourceAsStream("/assets/lekeystore.jks");
+            letsEncryptKeyStore.load(letsEncryptFile, "supersecretpassword".toCharArray());
+
+            KeyStore merged = KeyStore.getInstance(KeyStore.getDefaultType());
+            merged.load(null, new char[0]);
+            for (String alias : Collections.list(letsEncryptKeyStore.aliases()))
+                merged.setCertificateEntry(alias, letsEncryptKeyStore.getCertificate(alias));
+            for (String alias : Collections.list(defaultKeyStore.aliases()))
+                merged.setCertificateEntry(alias, defaultKeyStore.getCertificate(alias));
+
+            TrustManagerFactory instance = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            instance.init(merged);
+            SSLContext tls = SSLContext.getInstance("TLS");
+            tls.init(null, instance.getTrustManagers(), null);
+            HttpsURLConnection.setDefaultSSLSocketFactory(tls.getSocketFactory());
+            LOG.info("Added Lets Encrypt root certificates as additional trust");
+        } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException | KeyManagementException e) {
+            LOG.log(Level.SEVERE, "Failed to load lets encrypt certificate. Expect problems", e);
+        }
+    }
 }

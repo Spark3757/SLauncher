@@ -13,13 +13,12 @@ import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.wizard.SinglePageWizardProvider;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class WorldListItem extends Control {
     private final StringProperty title = new SimpleStringProperty();
@@ -30,10 +29,10 @@ public class WorldListItem extends Control {
 
     public WorldListItem(World world) {
         this.world = world;
-        this.simpleDateFormat = new SimpleDateFormat(i18n("world.time"));
+        this.simpleDateFormat = new SimpleDateFormat(I18n.i18n("world.time"));
 
         title.set(StringUtils.parseColorEscapes(world.getWorldName()));
-        subtitle.set(i18n("world.description", world.getFileName(), simpleDateFormat.format(new Date(world.getLastPlayed())), world.getGameVersion() == null ? i18n("message.unknown") : world.getGameVersion()));
+        subtitle.set(I18n.i18n("world.description", world.getFileName(), simpleDateFormat.format(new Date(world.getLastPlayed())), world.getGameVersion() == null ? I18n.i18n("message.unknown") : world.getGameVersion()));
     }
 
     @Override
@@ -55,8 +54,8 @@ public class WorldListItem extends Control {
 
     public void export() {
         FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle(i18n("world.export.title"));
-        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("world"), "*.zip"));
+        fileChooser.setTitle(I18n.i18n("world.export.title"));
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18n.i18n("world"), "*.zip"));
         fileChooser.setInitialFileName(world.getWorldName());
         File file = fileChooser.showSaveDialog(Controllers.getStage());
         if (file == null) {
@@ -78,7 +77,7 @@ public class WorldListItem extends Control {
         if (world.getGameVersion() == null || // old game will not write game version to level.dat
                 (VersionNumber.isIntVersionNumber(world.getGameVersion()) // we don't parse snapshot version
                         && VersionNumber.asVersion(world.getGameVersion()).compareTo(VersionNumber.asVersion("1.13")) < 0)) {
-            Controllers.dialog(i18n("world.datapack.1_13"));
+            Controllers.dialog(I18n.i18n("world.datapack.1_13"));
             return;
         }
         Controllers.navigate(new DatapackListPage(world.getWorldName(), world.getFile()));

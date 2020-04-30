@@ -3,7 +3,7 @@ package ru.spark.slauncher.auth.authlibinjector;
 import ru.spark.slauncher.auth.AuthenticationException;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class AuthlibInjectorDownloadException extends AuthenticationException {
 

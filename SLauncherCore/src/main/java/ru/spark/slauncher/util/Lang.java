@@ -1,5 +1,6 @@
 package ru.spark.slauncher.util;
 
+import ru.spark.slauncher.util.function.ExceptionalRunnable;
 import ru.spark.slauncher.util.function.ExceptionalSupplier;
 
 import java.util.*;
@@ -7,23 +8,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class Lang {
-
-    /**
-     * This is a useful function to prevent exceptions being eaten when using CompletableFuture.
-     * You can write:
-     * ... .exceptionally(handleUncaught);
-     */
-    public static final Function<Throwable, Void> handleUncaught = e -> {
-        handleUncaughtException(e);
-        return null;
-    };
 
     private Lang() {
     }
@@ -47,6 +39,29 @@ public final class Lang {
     @SafeVarargs
     public static <T> List<T> immutableListOf(T... elements) {
         return Collections.unmodifiableList(Arrays.asList(elements));
+    }
+
+    public static <T extends Comparable<T>> T clamp(T min, T val, T max) {
+        if (val.compareTo(min) < 0) return min;
+        else if (val.compareTo(max) > 0) return max;
+        else return val;
+    }
+
+    public static double clamp(double min, double val, double max) {
+        return Math.max(min, Math.min(val, max));
+    }
+
+    public static int clamp(int min, int val, int max) {
+        return Math.max(min, Math.min(val, max));
+    }
+
+    public static boolean test(ExceptionalRunnable<?> r) {
+        try {
+            r.run();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public static <E extends Exception> boolean test(ExceptionalSupplier<Boolean, E> r) {
@@ -85,6 +100,22 @@ public final class Lang {
         }
     }
 
+    public static <T> T getOrDefault(List<T> a, int index, T defaultValue) {
+        return index < 0 || index >= a.size() ? defaultValue : a.get(index);
+    }
+
+    public static <T> T merge(T a, T b, BinaryOperator<T> operator) {
+        if (a == null) return b;
+        if (b == null) return a;
+        return operator.apply(a, b);
+    }
+
+    public static <T> List<T> removingDuplicates(List<T> list) {
+        LinkedHashSet<T> set = new LinkedHashSet<>(list.size());
+        set.addAll(list);
+        return new ArrayList<>(set);
+    }
+
     /**
      * Join two collections into one list.
      *
@@ -100,6 +131,10 @@ public final class Lang {
         if (b != null)
             result.addAll(b);
         return result;
+    }
+
+    public static <T> List<T> copyList(List<T> list) {
+        return list == null ? null : list.isEmpty() ? null : new ArrayList<>(list);
     }
 
     public static void executeDelayed(Runnable runnable, TimeUnit timeUnit, long timeout, boolean isDaemon) {
@@ -198,12 +233,17 @@ public final class Lang {
         return t;
     }
 
+    /**
+     * This is a useful function to prevent exceptions being eaten when using CompletableFuture.
+     * You can write:
+     * ... .exceptionally(handleUncaught);
+     */
+    public static final Function<Throwable, Void> handleUncaught = e -> {
+        handleUncaughtException(e);
+        return null;
+    };
+
     public static void handleUncaughtException(Throwable e) {
         Thread.currentThread().getUncaughtExceptionHandler().uncaughtException(Thread.currentThread(), e);
     }
-
-    public static <T> T getOrDefault(List<T> a, int index, T defaultValue) {
-        return index < 0 || index >= a.size() ? defaultValue : a.get(index);
-    }
-
 }

@@ -6,14 +6,14 @@ import java.nio.charset.Charset;
 /**
  * This utility class consists of some util methods operating on InputStream/OutputStream.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public final class IOUtils {
 
-    public static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
-
     private IOUtils() {
     }
+
+    public static final int DEFAULT_BUFFER_SIZE = 8 * 1024;
 
     /**
      * Read all bytes to a buffer from given input stream. The stream will not be closed.

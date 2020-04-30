@@ -5,7 +5,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ExtractRules {
 

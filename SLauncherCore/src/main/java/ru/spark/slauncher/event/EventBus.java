@@ -2,20 +2,18 @@ package ru.spark.slauncher.event;
 
 import ru.spark.slauncher.util.Logging;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class EventBus {
 
-    public static final EventBus EVENT_BUS = new EventBus();
-    private final HashMap<Class<?>, EventManager<?>> events = new HashMap<>();
+    private final ConcurrentHashMap<Class<?>, EventManager<?>> events = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     public <T extends Event> EventManager<T> channel(Class<T> clazz) {
-        if (!events.containsKey(clazz))
-            events.put(clazz, new EventManager<>());
+        events.putIfAbsent(clazz, new EventManager<>());
         return (EventManager<T>) events.get(clazz);
     }
 
@@ -25,4 +23,6 @@ public final class EventBus {
 
         return channel((Class<Event>) obj.getClass()).fireEvent(obj);
     }
+
+    public static final EventBus EVENT_BUS = new EventBus();
 }

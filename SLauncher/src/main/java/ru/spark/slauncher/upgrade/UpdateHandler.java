@@ -8,11 +8,12 @@ import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskExecutor;
 import ru.spark.slauncher.ui.Controllers;
+import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.UpgradeDialog;
-import ru.spark.slauncher.ui.construct.MessageDialogPane;
+import ru.spark.slauncher.ui.construct.MessageDialogPane.MessageType;
+import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.StringUtils;
-import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.io.JarUtils;
 import ru.spark.slauncher.util.platform.JavaVersion;
@@ -27,9 +28,6 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static ru.spark.slauncher.ui.FXUtils.checkFxUserThread;
-import static ru.spark.slauncher.util.Lang.thread;
-import static ru.spark.slauncher.util.Logging.LOG;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class UpdateHandler {
@@ -48,7 +46,7 @@ public final class UpdateHandler {
                 performMigration();
             } catch (IOException e) {
                 Logging.LOG.log(Level.WARNING, "Failed to perform migration", e);
-                JOptionPane.showMessageDialog(null, I18n.i18n("fatal.apply_update_failure", Metadata.PUBLISH_URL) + "\n" + StringUtils.getStackTrace(e), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, i18n("fatal.apply_update_failure", Metadata.PUBLISH_URL) + "\n" + StringUtils.getStackTrace(e), "Error", JOptionPane.ERROR_MESSAGE);
             }
             return true;
         }
@@ -58,13 +56,13 @@ public final class UpdateHandler {
                 applyUpdate(Paths.get(args[1]));
             } catch (IOException e) {
                 Logging.LOG.log(Level.WARNING, "Failed to apply update", e);
-                JOptionPane.showMessageDialog(null, I18n.i18n("fatal.apply_update_failure", Metadata.PUBLISH_URL) + "\n" + StringUtils.getStackTrace(e), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, i18n("fatal.apply_update_failure", Metadata.PUBLISH_URL) + "\n" + StringUtils.getStackTrace(e), "Error", JOptionPane.ERROR_MESSAGE);
             }
             return true;
         }
 
         if (isFirstLaunchAfterUpgrade()) {
-            JOptionPane.showMessageDialog(null, I18n.i18n("fatal.migration_requires_manual_reboot"), "Info", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, i18n("fatal.migration_requires_manual_reboot"), "Info", JOptionPane.INFORMATION_MESSAGE);
             return true;
         }
 
@@ -72,41 +70,37 @@ public final class UpdateHandler {
     }
 
     public static void updateFrom(RemoteVersion version) {
-        checkFxUserThread();
+        FXUtils.checkFxUserThread();
 
         Controllers.dialog(new UpgradeDialog(() -> {
             Path downloaded;
             try {
                 downloaded = Files.createTempFile("slauncher-update-", ".jar");
             } catch (IOException e) {
-                LOG.log(Level.WARNING, "Failed to create temp file", e);
+                Logging.LOG.log(Level.WARNING, "Failed to create temp file", e);
                 return;
             }
 
-            Task task = new SLauncherDownloadTask(version, downloaded);
+            Task<?> task = new SLauncherDownloadTask(version, downloaded);
 
             TaskExecutor executor = task.executor();
             Controllers.taskDialog(executor, i18n("message.downloading"));
-            thread(() -> {
+            Lang.thread(() -> {
                 boolean success = executor.test();
 
                 if (success) {
                     try {
-                        if (!IntegrityChecker.isSelfVerified()) {
-                            throw new IOException("Current JAR is not verified");
-                        }
-
                         requestUpdate(downloaded, getCurrentLocation());
                         System.exit(0);
                     } catch (IOException e) {
-                        LOG.log(Level.WARNING, "Failed to update to " + version, e);
-                        Platform.runLater(() -> Controllers.dialog(StringUtils.getStackTrace(e), i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
+                        Logging.LOG.log(Level.WARNING, "Failed to update to " + version, e);
+                        Platform.runLater(() -> Controllers.dialog(StringUtils.getStackTrace(e), i18n("update.failed"), MessageType.ERROR));
                     }
 
                 } else {
-                    Throwable e = executor.getLastException();
-                    LOG.log(Level.WARNING, "Failed to update to " + version, e);
-                    Platform.runLater(() -> Controllers.dialog(e.toString(), i18n("update.failed"), MessageDialogPane.MessageType.ERROR));
+                    Exception e = executor.getException();
+                    Logging.LOG.log(Level.WARNING, "Failed to update to " + version, e);
+                    Platform.runLater(() -> Controllers.dialog(e.toString(), i18n("update.failed"), MessageType.ERROR));
                 }
             });
         }));
@@ -116,7 +110,6 @@ public final class UpdateHandler {
         Logging.LOG.info("Applying update to " + target);
 
         Path self = getCurrentLocation();
-        IntegrityChecker.requireVerifiedJar(self);
         ExecutableHeaderHelper.copyWithHeader(self, target);
 
         Optional<Path> newFilename = tryRename(target, Metadata.VERSION);
@@ -134,7 +127,6 @@ public final class UpdateHandler {
     }
 
     private static void requestUpdate(Path updateTo, Path self) throws IOException {
-        IntegrityChecker.requireVerifiedJar(updateTo);
         startJava(updateTo, "--apply-to", self.toString());
     }
 
@@ -206,14 +198,16 @@ public final class UpdateHandler {
     private static boolean isFirstLaunchAfterUpgrade() {
         Optional<Path> currentPath = JarUtils.thisJar();
         if (currentPath.isPresent()) {
-            Path updated = Metadata.SLauncher_DIRECTORY.resolve("SLauncher-" + Metadata.VERSION + ".jar");
-            return currentPath.get().toAbsolutePath().equals(updated.toAbsolutePath());
+            Path updated = Metadata.SL_DIRECTORY.resolve("SLauncher-" + Metadata.VERSION + ".jar");
+            if (currentPath.get().toAbsolutePath().equals(updated.toAbsolutePath())) {
+                return true;
+            }
         }
         return false;
     }
 
     private static void breakForceUpdateFeature() {
-        Path slauncherVersionJson = Metadata.SLauncher_DIRECTORY.resolve("slauncherver.json");
+        Path slauncherVersionJson = Metadata.SL_DIRECTORY.resolve("slauncherver.json");
         if (Files.isRegularFile(slauncherVersionJson)) {
             try {
                 Map<?, ?> content = new Gson().fromJson(FileUtils.readText(slauncherVersionJson), Map.class);

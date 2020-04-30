@@ -4,6 +4,7 @@ import com.google.gson.JsonParseException;
 import ru.spark.slauncher.game.Artifact;
 import ru.spark.slauncher.game.Library;
 import ru.spark.slauncher.util.Immutable;
+import ru.spark.slauncher.util.function.ExceptionalFunction;
 import ru.spark.slauncher.util.gson.TolerableValidationException;
 import ru.spark.slauncher.util.gson.Validation;
 
@@ -153,6 +154,7 @@ public class ForgeNewInstallProfile implements Validation {
          * {SIDE}: values other than "client" will be ignored.
          *
          * @return arguments to pass to the processor jar.
+         * @see ForgeNewInstallTask#parseLiteral(String, Map, ExceptionalFunction)
          */
         public List<String> getArgs() {
             return args == null ? Collections.emptyList() : args;
@@ -165,6 +167,7 @@ public class ForgeNewInstallProfile implements Validation {
          * Values can be in one of {entry} or 'literal'. Should be SHA-1 checksum.
          *
          * @return files output from this processor.
+         * @see ForgeNewInstallTask#parseLiteral(String, Map, ExceptionalFunction)
          */
         public Map<String, String> getOutputs() {
             return outputs == null ? Collections.emptyMap() : outputs;

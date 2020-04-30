@@ -12,11 +12,15 @@ public final class SVG {
     private SVG() {
     }
 
+    public interface SVGIcon {
+        Node createIcon(ObjectBinding<? extends Paint> fill, double width, double height);
+    }
+
     private static Node createSVGPath(String d, ObjectBinding<? extends Paint> fill, double width, double height) {
         SVGPath path = new SVGPath();
         path.getStyleClass().add("svg");
         path.setContent(d);
-        path.fillProperty().bind(fill);
+        if (fill != null) path.fillProperty().bind(fill);
 
         if (width < 0 || height < 0) {
             StackPane pane = new StackPane(path);
@@ -32,11 +36,11 @@ public final class SVG {
         return svg;
     }
 
+    // default fill: white, width: 20, height 20
+
     public static Node gear(ObjectBinding<? extends Paint> fill, double width, double height) {
         return createSVGPath("M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.21,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.21,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.67 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z", fill, width, height);
     }
-
-    // default fill: white, width: 20, height 20
 
     public static Node back(ObjectBinding<? extends Paint> fill, double width, double height) {
         return createSVGPath("M20,11V13H8L13.5,18.5L12.08,19.92L4.16,12L12.08,4.08L13.5,5.5L8,11H20Z", fill, width, height);
@@ -46,8 +50,16 @@ public final class SVG {
         return createSVGPath("M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z", fill, width, height);
     }
 
+    public static Node copy(ObjectBinding<? extends Paint> fill, double width, double height) {
+        return createSVGPath("M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z", fill, width, height);
+    }
+
     public static Node dotsVertical(ObjectBinding<? extends Paint> fill, double width, double height) {
         return createSVGPath("M12,16A2,2 0 0,1 14,18A2,2 0 0,1 12,20A2,2 0 0,1 10,18A2,2 0 0,1 12,16M12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12A2,2 0 0,1 12,10M12,4A2,2 0 0,1 14,6A2,2 0 0,1 12,8A2,2 0 0,1 10,6A2,2 0 0,1 12,4Z", fill, width, height);
+    }
+
+    public static Node dotsHorizontal(ObjectBinding<? extends Paint> fill, double width, double height) {
+        return createSVGPath("M16,12A2,2 0 0,1 18,10A2,2 0 0,1 20,12A2,2 0 0,1 18,14A2,2 0 0,1 16,12M10,12A2,2 0 0,1 12,10A2,2 0 0,1 14,12A2,2 0 0,1 12,14A2,2 0 0,1 10,12M4,12A2,2 0 0,1 6,10A2,2 0 0,1 8,12A2,2 0 0,1 6,14A2,2 0 0,1 4,12Z", fill, width, height);
     }
 
     public static Node delete(ObjectBinding<? extends Paint> fill, double width, double height) {
@@ -150,7 +162,11 @@ public final class SVG {
         return createSVGPath("M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z", fill, width, height);
     }
 
-    public interface SVGIcon {
-        Node createIcon(ObjectBinding<? extends Paint> fill, double width, double height);
+    public static Node arrowRight(ObjectBinding<? extends Paint> fill, double width, double height) {
+        return createSVGPath("M4,11V13H16L10.5,18.5L11.92,19.92L19.84,12L11.92,4.08L10.5,5.5L16,11H4Z", fill, width, height);
+    }
+
+    public static Node wrench(ObjectBinding<? extends Paint> fill, double width, double height) {
+        return createSVGPath("M22.7,19L13.6,9.9C14.5,7.6 14,4.9 12.1,3C10.1,1 7.1,0.6 4.7,1.7L9,6L6,9L1.6,4.7C0.4,7.1 0.9,10.1 2.9,12.1C4.8,14 7.5,14.5 9.8,13.6L18.9,22.7C19.3,23.1 19.9,23.1 20.3,22.7L22.6,20.4C23.1,20 23.1,19.3 22.7,19Z", fill, width, height);
     }
 }

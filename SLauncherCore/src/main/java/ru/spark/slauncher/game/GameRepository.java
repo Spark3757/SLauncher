@@ -14,7 +14,7 @@ import java.util.Collection;
  * Note that game repository will not do any operations which need connection with Internet, if do,
  * see {@link DependencyManager}
  *
- * @author Spark1337
+ * @author spark1337
  */
 public interface GameRepository extends VersionProvider {
 
@@ -41,6 +41,10 @@ public interface GameRepository extends VersionProvider {
         return getVersion(id).resolve(this);
     }
 
+    default Version getResolvedPreservingPatchesVersion(String id) throws VersionNotFoundException {
+        return getVersion(id).resolvePreservingPatches(this);
+    }
+
     /**
      * How many version are there?
      */
@@ -62,8 +66,8 @@ public interface GameRepository extends VersionProvider {
      */
     void refreshVersions();
 
-    default Task refreshVersionsAsync() {
-        return Task.of(this::refreshVersions);
+    default Task<Void> refreshVersionsAsync() {
+        return Task.runAsync(this::refreshVersions);
     }
 
     /**

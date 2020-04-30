@@ -17,25 +17,29 @@ import java.io.IOException;
 import java.util.Optional;
 import java.util.logging.Level;
 
+import static ru.spark.slauncher.setting.ConfigHolder.config;
+
 @JsonAdapter(Theme.TypeAdapter.class)
 public class Theme {
-    public static final Theme GREEN = new Theme("green", "#2e7d32");
-
+    public static final Theme GREEN = new Theme("green", "#2E7D32");
+    public static final Color BLACK = Color.web("#292929");
     public static final Color[] SUGGESTED_COLORS = new Color[]{
             Color.web("#5C6BC0"), // blue
             Color.web("#283593"), // dark blue
-            Color.web("#2e7d32"), // green
+            Color.web("#2E7D32"), // green
             Color.web("#E67E22"), // orange
             Color.web("#9C27B0"), // purple
             Color.web("#B71C1C")  // red
     };
 
+    private final Color paint;
     private final String color;
     private final String name;
 
     Theme(String name, String color) {
         this.name = name;
         this.color = color;
+        this.paint = Color.web(color);
     }
 
     public static Theme custom(String color) {
@@ -52,7 +56,7 @@ public class Theme {
         else if (name.equalsIgnoreCase("darker_blue"))
             return Optional.of(custom("#283593"));
         else if (name.equalsIgnoreCase("green"))
-            return Optional.of(custom("#2e7d32"));
+            return Optional.of(custom("#2E7D32"));
         else if (name.equalsIgnoreCase("orange"))
             return Optional.of(custom("#E67E22"));
         else if (name.equalsIgnoreCase("purple"))
@@ -75,12 +79,12 @@ public class Theme {
     }
 
     public static ObjectBinding<Color> foregroundFillBinding() {
-        return BindingMapping.of(ConfigHolder.config().themeProperty())
+        return BindingMapping.of(config().themeProperty())
                 .map(Theme::getForegroundColor);
     }
 
     public static ObjectBinding<Color> blackFillBinding() {
-        return Bindings.createObjectBinding(() -> Color.BLACK);
+        return Bindings.createObjectBinding(() -> BLACK);
     }
 
     public static ObjectBinding<Color> whiteFillBinding() {
@@ -108,15 +112,19 @@ public class Theme {
     }
 
     public String[] getStylesheets() {
+        Color textFill = getForegroundColor();
+
         String css;
         try {
             File temp = File.createTempFile("slauncher", ".css");
             FileUtils.writeText(temp, IOUtils.readFullyAsString(ResourceNotFoundError.getResourceAsStream("/assets/css/custom.css"))
-                    .replace("%base-color%", color)
-                    .replace("%font-color%", getColorDisplayName(getForegroundColor())));
+                    .replace("${base-color}", color)
+                    .replace("${base-rippler-color}", String.format("rgba(%d, %d, %d, 0.3)", (int) Math.ceil(paint.getRed() * 256), (int) Math.ceil(paint.getGreen() * 256), (int) Math.ceil(paint.getBlue() * 256)))
+                    .replace("${disabled-font-color}", String.format("rgba(%d, %d, %d, 0.7)", (int) Math.ceil(textFill.getRed() * 256), (int) Math.ceil(textFill.getGreen() * 256), (int) Math.ceil(textFill.getBlue() * 256)))
+                    .replace("${font-color}", getColorDisplayName(getForegroundColor())));
             css = temp.toURI().toString();
         } catch (IOException | NullPointerException e) {
-            Logging.LOG.log(Level.SEVERE, "Unable to create theme stylesheet. Fallback to blue theme.", e);
+            Logging.LOG.log(Level.SEVERE, "Unable to create theme stylesheet. Fallback to green theme.", e);
             css = "/assets/css/green.css";
         }
 

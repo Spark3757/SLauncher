@@ -3,7 +3,7 @@ package ru.spark.slauncher.download.optifine;
 import com.google.gson.annotations.SerializedName;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class OptiFineVersion {
 

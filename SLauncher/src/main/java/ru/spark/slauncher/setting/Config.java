@@ -22,6 +22,7 @@ import ru.spark.slauncher.upgrade.UpdateChannel;
 import ru.spark.slauncher.util.gson.EnumOrdinalDeserializer;
 import ru.spark.slauncher.util.gson.FileTypeAdapter;
 import ru.spark.slauncher.util.i18n.Locales;
+import ru.spark.slauncher.util.i18n.Locales.SupportedLocale;
 import ru.spark.slauncher.util.javafx.ObservableHelper;
 import ru.spark.slauncher.util.javafx.PropertyUtils;
 
@@ -29,7 +30,6 @@ import java.io.File;
 import java.net.Proxy;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 public final class Config implements Cloneable, Observable {
 
@@ -69,12 +69,16 @@ public final class Config implements Cloneable, Observable {
     private StringProperty proxyUser = new SimpleStringProperty();
     @SerializedName("proxyPassword")
     private StringProperty proxyPass = new SimpleStringProperty();
+    @SerializedName("width")
+    private DoubleProperty width = new SimpleDoubleProperty();
+    @SerializedName("height")
+    private DoubleProperty height = new SimpleDoubleProperty();
     @SerializedName("theme")
     private ObjectProperty<Theme> theme = new SimpleObjectProperty<>(Theme.GREEN);
     @SerializedName("localization")
-    private ObjectProperty<Locales.SupportedLocale> localization = new SimpleObjectProperty<>(Locales.DEFAULT);
+    private ObjectProperty<SupportedLocale> localization = new SimpleObjectProperty<>(Locales.DEFAULT);
     @SerializedName("downloadType")
-    private StringProperty downloadType = new SimpleStringProperty("mojang");
+    private StringProperty downloadType = new SimpleStringProperty("bmclapi");
     @SerializedName("configurations")
     private ObservableMap<String, Profile> configurations = FXCollections.observableMap(new TreeMap<>());
     @SerializedName("accounts")
@@ -89,8 +93,6 @@ public final class Config implements Cloneable, Observable {
     private ObservableList<AuthlibInjectorServer> authlibInjectorServers = FXCollections.observableArrayList(server -> new Observable[]{server});
     @SerializedName("updateChannel")
     private ObjectProperty<UpdateChannel> updateChannel = new SimpleObjectProperty<>(UpdateChannel.STABLE);
-    @SerializedName("uuid")
-    private StringProperty uuid = new SimpleStringProperty(UUID.randomUUID().toString());
     @SerializedName("_version")
     private IntegerProperty configVersion = new SimpleIntegerProperty(0);
     /**
@@ -288,6 +290,30 @@ public final class Config implements Cloneable, Observable {
         return proxyPass;
     }
 
+    public double getWidth() {
+        return width.get();
+    }
+
+    public void setWidth(double width) {
+        this.width.set(width);
+    }
+
+    public DoubleProperty widthProperty() {
+        return width;
+    }
+
+    public double getHeight() {
+        return height.get();
+    }
+
+    public void setHeight(double height) {
+        this.height.set(height);
+    }
+
+    public DoubleProperty heightProperty() {
+        return height;
+    }
+
     public Theme getTheme() {
         return theme.get();
     }
@@ -300,15 +326,15 @@ public final class Config implements Cloneable, Observable {
         return theme;
     }
 
-    public Locales.SupportedLocale getLocalization() {
+    public SupportedLocale getLocalization() {
         return localization.get();
     }
 
-    public void setLocalization(Locales.SupportedLocale localization) {
+    public void setLocalization(SupportedLocale localization) {
         this.localization.set(localization);
     }
 
-    public ObjectProperty<Locales.SupportedLocale> localizationProperty() {
+    public ObjectProperty<SupportedLocale> localizationProperty() {
         return localization;
     }
 
@@ -418,13 +444,5 @@ public final class Config implements Cloneable, Observable {
 
     public StringProperty preferredLoginTypeProperty() {
         return preferredLoginType;
-    }
-
-    public String getUuid() {
-        return uuid.get();
-    }
-
-    public StringProperty uuidProperty() {
-        return uuid;
     }
 }

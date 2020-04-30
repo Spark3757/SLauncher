@@ -4,6 +4,8 @@ import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.util.Duration;
+import org.jetbrains.annotations.Nullable;
+import ru.spark.slauncher.ui.FXUtils;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -24,6 +26,7 @@ public enum ContainerAnimations {
         c.getCurrentNode().setScaleY(1);
         c.getCurrentNode().setOpacity(1);
     }, c -> Collections.emptyList()),
+
     /**
      * A fade between the old and new view
      */
@@ -45,6 +48,36 @@ public enum ContainerAnimations {
                     new KeyFrame(c.getDuration(),
                             new KeyValue(c.getPreviousNode().opacityProperty(), 0, Interpolator.EASE_BOTH),
                             new KeyValue(c.getCurrentNode().opacityProperty(), 1, Interpolator.EASE_BOTH)))),
+
+    /**
+     * A fade between the old and new view
+     */
+    FADE_IN(c -> {
+        c.getCurrentNode().setTranslateX(0);
+        c.getCurrentNode().setTranslateY(0);
+        c.getCurrentNode().setScaleX(1);
+        c.getCurrentNode().setScaleY(1);
+        c.getCurrentNode().setOpacity(0);
+    }, c ->
+            Arrays.asList(new KeyFrame(Duration.ZERO,
+                            new KeyValue(c.getCurrentNode().opacityProperty(), 0, FXUtils.SINE)),
+                    new KeyFrame(c.getDuration(),
+                            new KeyValue(c.getCurrentNode().opacityProperty(), 1, FXUtils.SINE)))),
+
+    /**
+     * A fade between the old and new view
+     */
+    FADE_OUT(c -> {
+        c.getCurrentNode().setTranslateX(0);
+        c.getCurrentNode().setTranslateY(0);
+        c.getCurrentNode().setScaleX(1);
+        c.getCurrentNode().setScaleY(1);
+        c.getCurrentNode().setOpacity(1);
+    }, c ->
+            Arrays.asList(new KeyFrame(Duration.ZERO,
+                            new KeyValue(c.getCurrentNode().opacityProperty(), 1, FXUtils.SINE)),
+                    new KeyFrame(c.getDuration(),
+                            new KeyValue(c.getCurrentNode().opacityProperty(), 0, FXUtils.SINE)))),
     /**
      * A zoom effect
      */
@@ -126,6 +159,7 @@ public enum ContainerAnimations {
                             new KeyValue(c.getPreviousNode().translateXProperty(), c.getCurrentRoot().getWidth(), Interpolator.EASE_BOTH))));
 
     private final AnimationProducer animationProducer;
+    private ContainerAnimations opposite;
 
     ContainerAnimations(Consumer<AnimationHandler> init, Function<AnimationHandler, List<KeyFrame>> animationProducer) {
         this.animationProducer = new AnimationProducer() {
@@ -138,10 +172,30 @@ public enum ContainerAnimations {
             public List<KeyFrame> animate(AnimationHandler handler) {
                 return animationProducer.apply(handler);
             }
+
+            @Override
+            public @Nullable AnimationProducer opposite() {
+                return opposite != null ? opposite.getAnimationProducer() : null;
+            }
         };
     }
 
     public AnimationProducer getAnimationProducer() {
         return animationProducer;
+    }
+
+    public ContainerAnimations getOpposite() {
+        return opposite;
+    }
+
+    static {
+        NONE.opposite = NONE;
+        FADE.opposite = FADE;
+        SWIPE_LEFT.opposite = SWIPE_RIGHT;
+        SWIPE_RIGHT.opposite = SWIPE_LEFT;
+        FADE_IN.opposite = FADE_OUT;
+        FADE_OUT.opposite = FADE_IN;
+        ZOOM_IN.opposite = ZOOM_OUT;
+        ZOOM_OUT.opposite = ZOOM_IN;
     }
 }

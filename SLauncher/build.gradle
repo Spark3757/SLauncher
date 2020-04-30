@@ -3,7 +3,12 @@ plugins {
     id 'application'
 }
 
+
+import org.tukaani.xz.LZMA2Options
+import org.tukaani.xz.XZOutputStream
+
 import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.security.KeyFactory
 import java.security.MessageDigest
 import java.security.Signature
@@ -13,16 +18,8 @@ import java.util.jar.JarOutputStream
 import java.util.jar.Pack200
 import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipFile
-import java.nio.file.Files
 
-import org.tukaani.xz.LZMA2Options
-import org.tukaani.xz.XZOutputStream
-
-def buildnumber = System.getenv("BUILD_NUMBER") ?: "SNAPSHOT"
-if (System.getenv("BUILD_NUMBER") != null && System.getenv("BUILD_NUMBER_OFFSET") != null)
-    buildnumber = (Integer.parseInt(System.getenv("BUILD_NUMBER")) - Integer.parseInt(System.getenv("BUILD_NUMBER_OFFSET"))).toString()
-def versionroot = System.getenv("VERSION_ROOT") ?: "3.2.4"
-version = versionroot + '.' + buildnumber
+version = '3.4.2'
 
 mainClassName = 'ru.spark.slauncher.Main'
 
@@ -43,7 +40,7 @@ def createChecksum(File file) {
 }
 
 def attachSignature(File jar) {
-    def keyLocation = System.getenv("SLAUNCHER_SIGNATURE_KEY")
+    def keyLocation = System.getenv("SL_SIGNATURE_KEY");
     if (keyLocation == null)
         return
     def privatekey = KeyFactory.getInstance("RSA").generatePrivate(new PKCS8EncodedKeySpec(new File(keyLocation).bytes))
@@ -78,7 +75,7 @@ def repack(File file) {
 
 jar {
     manifest {
-        attributes 'Created-By': 'Copyright(c) 2018-2019 SLauncher.',
+        attributes 'Created-By': 'Copyright(c) 2018-2020 spark1337.',
                 'Main-Class': mainClassName,
                 'Multi-Release': 'true',
                 'Implementation-Version': version
@@ -91,7 +88,6 @@ shadowJar {
 
     exclude 'META-INF/maven/**'
     exclude 'META-INF/NOTICE.txt'
-    exclude 'META-INF/LICENSE.txt'
 
     dependencies {
         exclude(dependency('org.jetbrains:annotations'))

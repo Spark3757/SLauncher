@@ -1,9 +1,9 @@
 package ru.spark.slauncher.ui;
 
 import com.jfoenix.controls.*;
-import javafx.animation.Animation;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
@@ -11,7 +11,7 @@ import javafx.beans.property.Property;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WeakChangeListener;
-import javafx.event.EventHandler;
+import javafx.beans.value.WritableValue;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -19,8 +19,6 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.input.MouseEvent;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -28,6 +26,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.util.Callback;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
+import ru.spark.slauncher.util.CrashReporter;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.ResourceNotFoundError;
@@ -45,28 +44,14 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public final class FXUtils {
-    public static final Interpolator SINE = new Interpolator() {
-        @Override
-        protected double curve(double t) {
-            return Math.sin(t * Math.PI / 2);
-        }
-
-        @Override
-        public String toString() {
-            return "Interpolator.SINE";
-        }
-    };
-
     private FXUtils() {
     }
 
@@ -93,8 +78,10 @@ public final class FXUtils {
         value.addListener((a, b, c) -> consumer.accept(c));
     }
 
-    public static <T> void onWeakChange(ObservableValue<T> value, Consumer<T> consumer) {
-        value.addListener(new WeakChangeListener<>((a, b, c) -> consumer.accept(c)));
+    public static <T> WeakChangeListener<T> onWeakChange(ObservableValue<T> value, Consumer<T> consumer) {
+        WeakChangeListener<T> listener = new WeakChangeListener<>((a, b, c) -> consumer.accept(c));
+        value.addListener(listener);
+        return listener;
     }
 
     public static <T> void onChangeAndOperate(ObservableValue<T> value, Consumer<T> consumer) {
@@ -102,9 +89,9 @@ public final class FXUtils {
         onChange(value, consumer);
     }
 
-    public static <T> void onWeakChangeAndOperate(ObservableValue<T> value, Consumer<T> consumer) {
+    public static <T> WeakChangeListener<T> onWeakChangeAndOperate(ObservableValue<T> value, Consumer<T> consumer) {
         consumer.accept(value.getValue());
-        onWeakChange(value, consumer);
+        return onWeakChange(value, consumer);
     }
 
     public static void runLaterIf(BooleanSupplier condition, Runnable runnable) {
@@ -123,6 +110,24 @@ public final class FXUtils {
                 imageView.setFitWidth(-1);
             }
         });
+    }
+
+    private static class ListenerPair<T> {
+        private final ObservableValue<T> value;
+        private final ChangeListener<? super T> listener;
+
+        ListenerPair(ObservableValue<T> value, ChangeListener<? super T> listener) {
+            this.value = value;
+            this.listener = listener;
+        }
+
+        void bind() {
+            value.addListener(listener);
+        }
+
+        void unbind() {
+            value.removeListener(listener);
+        }
     }
 
     public static <T> void addListener(Node node, String key, ObservableValue<T> value, Consumer<? super T> callback) {
@@ -176,19 +181,19 @@ public final class FXUtils {
         return field.getProperties().containsKey("FXUtils.validation");
     }
 
-    public static void setOverflowHidden(Region region, boolean hidden) {
-        if (hidden) {
-            Rectangle rectangle = new Rectangle();
-            rectangle.widthProperty().bind(region.widthProperty());
-            rectangle.heightProperty().bind(region.heightProperty());
-            region.setClip(rectangle);
-        } else {
-            region.setClip(null);
-        }
+    public static Rectangle setOverflowHidden(Region region) {
+        Rectangle rectangle = new Rectangle();
+        rectangle.widthProperty().bind(region.widthProperty());
+        rectangle.heightProperty().bind(region.heightProperty());
+        region.setClip(rectangle);
+        return rectangle;
     }
 
-    public static boolean getOverflowHidden(Region region) {
-        return region.getClip() != null;
+    public static Rectangle setOverflowHidden(Region region, double arc) {
+        Rectangle rectangle = setOverflowHidden(region);
+        rectangle.setArcWidth(arc);
+        rectangle.setArcHeight(arc);
+        return rectangle;
     }
 
     public static void setLimitWidth(Region region, double width) {
@@ -274,6 +279,27 @@ public final class FXUtils {
                 Tooltip.install(node, tooltip);
             }
         });
+    }
+
+    public static void playAnimation(Node node, String animationKey, Timeline timeline) {
+        animationKey = "FXUTILS.ANIMATION." + animationKey;
+        Object oldTimeline = node.getProperties().get(animationKey);
+        if (oldTimeline instanceof Timeline) ((Timeline) oldTimeline).stop();
+        if (timeline != null) timeline.play();
+        node.getProperties().put(animationKey, timeline);
+    }
+
+    public static <T> void playAnimation(Node node, String animationKey, Duration duration, WritableValue<T> property, T from, T to, Interpolator interpolator) {
+        if (from == null) from = property.getValue();
+        if (duration == null || Objects.equals(duration, Duration.ZERO) || Objects.equals(from, to)) {
+            playAnimation(node, animationKey, null);
+            property.setValue(to);
+        } else {
+            playAnimation(node, animationKey, new Timeline(
+                    new KeyFrame(Duration.ZERO, new KeyValue(property, from, interpolator)),
+                    new KeyFrame(duration, new KeyValue(property, to, interpolator))
+            ));
+        }
     }
 
     public static void openFolder(File file) {
@@ -373,7 +399,7 @@ public final class FXUtils {
      */
     @SuppressWarnings("unchecked")
     @Deprecated
-    public static void bindEnum(JFXComboBox<?> comboBox, Property<? extends Enum> property) {
+    public static void bindEnum(JFXComboBox<?> comboBox, Property<? extends Enum<?>> property) {
         unbindEnum(comboBox);
         ChangeListener<Number> listener = (a, b, newValue) ->
                 ((Property) property).setValue(property.getValue().getClass().getEnumConstants()[newValue.intValue()]);
@@ -397,78 +423,12 @@ public final class FXUtils {
         comboBox.getSelectionModel().selectedIndexProperty().removeListener(listener);
     }
 
-    public static void smoothScrolling(ListView<?> listView) {
-        listView.skinProperty().addListener(o -> {
-            ScrollBar bar = (ScrollBar) listView.lookup(".scroll-bar");
-            Node virtualFlow = listView.lookup(".virtual-flow");
-            double[] frictions = new double[]{0.99, 0.1, 0.05, 0.04, 0.03, 0.02, 0.01, 0.04, 0.01, 0.008, 0.008, 0.008, 0.008, 0.0006, 0.0005, 0.00003, 0.00001};
-            double[] pushes = new double[]{1};
-            double[] derivatives = new double[frictions.length];
-
-            Timeline timeline = new Timeline();
-            bar.addEventHandler(MouseEvent.DRAG_DETECTED, e -> timeline.stop());
-
-            EventHandler<ScrollEvent> scrollEventHandler = event -> {
-                if (event.getEventType() == ScrollEvent.SCROLL) {
-                    int direction = event.getDeltaY() > 0 ? -1 : 1;
-                    for (int i = 0; i < pushes.length; ++i)
-                        derivatives[i] += direction * pushes[i];
-                    if (timeline.getStatus() == Animation.Status.STOPPED)
-                        timeline.play();
-                    event.consume();
-                }
-            };
-
-            bar.addEventHandler(ScrollEvent.ANY, scrollEventHandler);
-            virtualFlow.setOnScroll(scrollEventHandler);
-
-            timeline.getKeyFrames().add(new KeyFrame(Duration.millis(3), event -> {
-                for (int i = 0; i < derivatives.length; ++i)
-                    derivatives[i] *= frictions[i];
-                for (int i = 1; i < derivatives.length; ++i)
-                    derivatives[i] += derivatives[i - 1];
-                double dy = derivatives[derivatives.length - 1];
-                double height = listView.getLayoutBounds().getHeight();
-                bar.setValue(Math.min(Math.max(bar.getValue() + dy / height, 0), 1));
-                if (Math.abs(dy) < 0.001)
-                    timeline.stop();
-                listView.requestLayout();
-            }));
-            timeline.setCycleCount(Animation.INDEFINITE);
-        });
-    }
-
-    public static <T> T runInUIThread(Supplier<T> supplier) {
-        if (javafx.application.Platform.isFxApplicationThread()) {
-            return supplier.get();
-        } else {
-            CountDownLatch doneLatch = new CountDownLatch(1);
-            AtomicReference<T> reference = new AtomicReference<>();
-            Platform.runLater(() -> {
-                try {
-                    reference.set(supplier.get());
-                } finally {
-                    doneLatch.countDown();
-                }
-
-            });
-
-            try {
-                doneLatch.await();
-            } catch (InterruptedException var3) {
-                Thread.currentThread().interrupt();
-            }
-
-            return reference.get();
-        }
-    }
-
-
     /**
      * Suppress IllegalArgumentException since the url is supposed to be correct definitely.
      *
      * @param url the url of image. The image resource should be a file within the jar.
      * @return the image resource within the jar.
+     * @see CrashReporter
      * @see ResourceNotFoundError
      */
     public static Image newImage(String url) {
@@ -478,6 +438,7 @@ public final class FXUtils {
             throw new ResourceNotFoundError("Cannot access image: " + url, e);
         }
     }
+
     public static void applyDragListener(Node node, FileFilter filter, Consumer<List<File>> callback) {
         applyDragListener(node, filter, callback, null);
     }
@@ -534,28 +495,22 @@ public final class FXUtils {
         };
     }
 
+    public static final Interpolator SINE = new Interpolator() {
+        @Override
+        protected double curve(double t) {
+            return Math.sin(t * Math.PI / 2);
+        }
+
+        @Override
+        public String toString() {
+            return "Interpolator.SINE";
+        }
+    };
+
     public static Runnable withJFXPopupClosing(Runnable runnable, JFXPopup popup) {
         return () -> {
             runnable.run();
             popup.hide();
         };
-    }
-
-    private static class ListenerPair<T> {
-        private final ObservableValue<T> value;
-        private final ChangeListener<? super T> listener;
-
-        ListenerPair(ObservableValue<T> value, ChangeListener<? super T> listener) {
-            this.value = value;
-            this.listener = listener;
-        }
-
-        void bind() {
-            value.addListener(listener);
-        }
-
-        void unbind() {
-            value.removeListener(listener);
-        }
     }
 }

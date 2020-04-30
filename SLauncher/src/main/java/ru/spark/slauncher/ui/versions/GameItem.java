@@ -13,13 +13,11 @@ import ru.spark.slauncher.game.GameVersion;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import static ru.spark.slauncher.download.LibraryAnalyzer.LibraryType.*;
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class GameItem extends Control {
 
@@ -36,23 +34,27 @@ public class GameItem extends Control {
         this.version = id;
 
         // GameVersion.minecraftVersion() is a time-costing job (up to ~200 ms)
-        CompletableFuture.supplyAsync(() -> GameVersion.minecraftVersion(profile.getRepository().getVersionJar(id)).orElse("Unknown"), POOL_VERSION_RESOLVE)
+        CompletableFuture.supplyAsync(() -> GameVersion.minecraftVersion(profile.getRepository().getVersionJar(id)).orElse(I18n.i18n("message.unknown")), POOL_VERSION_RESOLVE)
                 .thenAcceptAsync(game -> {
                     StringBuilder libraries = new StringBuilder(game);
-                    LibraryAnalyzer analyzer = LibraryAnalyzer.analyze(profile.getRepository().getVersion(id));
-                    analyzer.get(FORGE).ifPresent(library -> libraries.append(", ").append(i18n("install.installer.forge")).append(": ").append(modifyVersion(game, library.getVersion().replaceAll("(?i)forge", ""))));
-                    analyzer.get(LITELOADER).ifPresent(library -> libraries.append(", ").append(i18n("install.installer.liteloader")).append(": ").append(modifyVersion(game, library.getVersion().replaceAll("(?i)liteloader", ""))));
-                    analyzer.get(OPTIFINE).ifPresent(library -> libraries.append(", ").append(i18n("install.installer.optifine")).append(": ").append(modifyVersion(game, library.getVersion().replaceAll("(?i)optifine", ""))));
+                    LibraryAnalyzer analyzer = LibraryAnalyzer.analyze(profile.getRepository().getResolvedPreservingPatchesVersion(id));
+                    for (LibraryAnalyzer.LibraryMark mark : analyzer) {
+                        String libraryId = mark.getLibraryId();
+                        String libraryVersion = mark.getLibraryVersion();
+                        if (libraryId.equals(LibraryAnalyzer.LibraryType.MINECRAFT.getPatchId())) continue;
+                        if (I18n.hasKey("install.installer." + libraryId)) {
+                            libraries.append(", ").append(I18n.i18n("install.installer." + libraryId));
+                            if (libraryVersion != null)
+                                libraries.append(": ").append(modifyVersion("", libraryVersion.replaceAll("(?i)" + libraryId, "")));
+                        }
+                    }
+
                     subtitle.set(libraries.toString());
                 }, Platform::runLater)
                 .exceptionally(Lang.handleUncaught);
 
         title.set(id);
         image.set(profile.getRepository().getVersionIconImage(version));
-    }
-
-    private static String modifyVersion(String gameVersion, String version) {
-        return StringUtils.removeSuffix(StringUtils.removePrefix(StringUtils.removeSuffix(StringUtils.removePrefix(version.replace(gameVersion, "").trim(), "-"), "-"), "_"), "_");
     }
 
     @Override
@@ -78,5 +80,9 @@ public class GameItem extends Control {
 
     public ObjectProperty<Image> imageProperty() {
         return image;
+    }
+
+    private static String modifyVersion(String gameVersion, String version) {
+        return StringUtils.removeSuffix(StringUtils.removePrefix(StringUtils.removeSuffix(StringUtils.removePrefix(version.replace(gameVersion, "").trim(), "-"), "-"), "_"), "_");
     }
 }

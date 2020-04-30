@@ -5,8 +5,8 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.*?>
 <?import ru.spark.slauncher.ui.FXUtils?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane" mouseTransparent="true">
     <VBox alignment="CENTER">
         <Label alignment="CENTER" fx:id="lblGameVersion" style="-fx-color: gray;"/>

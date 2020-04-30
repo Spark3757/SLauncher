@@ -1,39 +1,69 @@
 package ru.spark.slauncher.setting;
 
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.ObjectBinding;
-import javafx.beans.value.ObservableObjectValue;
+import ru.spark.slauncher.download.AdaptedDownloadProvider;
 import ru.spark.slauncher.download.BMCLAPIDownloadProvider;
 import ru.spark.slauncher.download.DownloadProvider;
 import ru.spark.slauncher.download.MojangDownloadProvider;
+import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Pair;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static ru.spark.slauncher.setting.ConfigHolder.config;
 
 public final class DownloadProviders {
     public static final Map<String, DownloadProvider> providersById = Lang.mapOf(
             Pair.pair("mojang", new MojangDownloadProvider()),
-            Pair.pair("bmclapi", new BMCLAPIDownloadProvider()));
-    public static final String DEFAULT_PROVIDER_ID = "bmclapi";
-    private static ObjectBinding<DownloadProvider> downloadProviderProperty;
+            Pair.pair("bmclapi", new BMCLAPIDownloadProvider("https://bmclapi2.bangbang93.com")),
+            Pair.pair("mcbbs", new BMCLAPIDownloadProvider("https://download.mcbbs.net")));
+    public static final String DEFAULT_PROVIDER_ID = "mojang";
+    private static final AdaptedDownloadProvider DOWNLOAD_PROVIDER = new AdaptedDownloadProvider();
 
     private DownloadProviders() {
     }
 
     static void init() {
-        downloadProviderProperty = Bindings.createObjectBinding(
-                () -> Optional.ofNullable(providersById.get(ConfigHolder.config().getDownloadType()))
-                        .orElse(providersById.get(DEFAULT_PROVIDER_ID)),
-                ConfigHolder.config().downloadTypeProperty());
+        FXUtils.onChangeAndOperate(config().downloadTypeProperty(), downloadType -> {
+            DownloadProvider primary = Optional.ofNullable(providersById.get(config().getDownloadType()))
+                    .orElse(providersById.get(DEFAULT_PROVIDER_ID));
+            DOWNLOAD_PROVIDER.setDownloadProviderCandidates(
+                    Stream.concat(
+                            Stream.of(primary),
+                            providersById.values().stream().filter(x -> x != primary)
+                    ).collect(Collectors.toList())
+            );
+        });
     }
 
-    public static DownloadProvider getDownloadProvider() {
-        return downloadProviderProperty.get();
+    public static String getPrimaryDownloadProviderId() {
+        String downloadType = config().getDownloadType();
+        if (providersById.containsKey(downloadType))
+            return downloadType;
+        else
+            return DEFAULT_PROVIDER_ID;
     }
 
-    public static ObservableObjectValue<DownloadProvider> downloadProviderProperty() {
-        return downloadProviderProperty;
+    public static AdaptedDownloadProvider getDownloadProviderByPrimaryId(String primaryId) {
+        AdaptedDownloadProvider adaptedDownloadProvider = new AdaptedDownloadProvider();
+        DownloadProvider primary = Optional.ofNullable(providersById.get(primaryId))
+                .orElse(providersById.get(DEFAULT_PROVIDER_ID));
+        adaptedDownloadProvider.setDownloadProviderCandidates(
+                Stream.concat(
+                        Stream.of(primary),
+                        providersById.values().stream().filter(x -> x != primary)
+                ).collect(Collectors.toList())
+        );
+        return adaptedDownloadProvider;
+    }
+
+    /**
+     * Get current primary preferred download provider
+     */
+    public static AdaptedDownloadProvider getDownloadProvider() {
+        return DOWNLOAD_PROVIDER;
     }
 }

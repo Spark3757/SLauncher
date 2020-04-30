@@ -1,5 +1,6 @@
 package ru.spark.slauncher.ui.construct;
 
+import javafx.css.PseudoClass;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
@@ -13,12 +14,18 @@ import javafx.scene.text.TextAlignment;
 import ru.spark.slauncher.ui.FXUtils;
 
 public class AdvancedListItemSkin extends SkinBase<AdvancedListItem> {
+    private final PseudoClass SELECTED = PseudoClass.getPseudoClass("selected");
 
     public AdvancedListItemSkin(AdvancedListItem skinnable) {
         super(skinnable);
 
         StackPane stackPane = new StackPane();
+        stackPane.getStyleClass().add("container");
         RipplerContainer container = new RipplerContainer(stackPane);
+
+        FXUtils.onChangeAndOperate(skinnable.activeProperty(), active -> {
+            skinnable.pseudoClassStateChanged(SELECTED, active);
+        });
 
         BorderPane root = new BorderPane();
         root.setPickOnBounds(false);

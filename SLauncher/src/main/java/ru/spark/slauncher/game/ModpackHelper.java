@@ -3,7 +3,14 @@ package ru.spark.slauncher.game;
 import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import ru.spark.slauncher.mod.*;
-import ru.spark.slauncher.setting.EnumGameDirectory;
+import ru.spark.slauncher.mod.curse.CurseCompletionException;
+import ru.spark.slauncher.mod.curse.CurseInstallTask;
+import ru.spark.slauncher.mod.curse.CurseManifest;
+import ru.spark.slauncher.mod.multimc.MultiMCInstanceConfiguration;
+import ru.spark.slauncher.mod.multimc.MultiMCModpackInstallTask;
+import ru.spark.slauncher.mod.server.ServerModpackLocalInstallTask;
+import ru.spark.slauncher.mod.server.ServerModpackManifest;
+import ru.spark.slauncher.mod.server.ServerModpackRemoteInstallTask;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.setting.VersionSetting;
 import ru.spark.slauncher.task.Schedulers;
@@ -33,7 +40,7 @@ public final class ModpackHelper {
         }
 
         try {
-            return SLauncherModpackManager.readSLauncherModpackManifest(file, charset);
+            return SLModpackManager.readSLModpackManifest(file, charset);
         } catch (Exception e) {
             // ignore it, not a valid SLauncher modpack.
         }
@@ -42,6 +49,12 @@ public final class ModpackHelper {
             return MultiMCInstanceConfiguration.readMultiMCModpackManifest(file, charset);
         } catch (Exception e) {
             // ignore it, not a valid MultiMC modpack.
+        }
+
+        try {
+            return ServerModpackManifest.readManifest(file, charset);
+        } catch (Exception e) {
+            // ignore it, not a valid Server modpack.
         }
 
         throw new UnsupportedModpackException(file.toString());
@@ -60,8 +73,8 @@ public final class ModpackHelper {
     }
 
     private static String getManifestType(Object manifest) throws UnsupportedModpackException {
-        if (manifest instanceof SLauncherModpackManifest)
-            return SLauncherModpackInstallTask.MODPACK_TYPE;
+        if (manifest instanceof SLModpackManifest)
+            return SLModpackInstallTask.MODPACK_TYPE;
         else if (manifest instanceof MultiMCInstanceConfiguration)
             return MultiMCModpackInstallTask.MODPACK_TYPE;
         else if (manifest instanceof CurseManifest)
@@ -70,42 +83,65 @@ public final class ModpackHelper {
             throw new UnsupportedModpackException();
     }
 
-    public static Task getInstallTask(Profile profile, File zipFile, String name, Modpack modpack) {
+    public static Task<Void> getInstallTask(Profile profile, ServerModpackManifest manifest, String name, Modpack modpack) {
         profile.getRepository().markVersionAsModpack(name);
 
         ExceptionalRunnable<?> success = () -> {
-            SLauncherGameRepository repository = profile.getRepository();
+            SLGameRepository repository = profile.getRepository();
             repository.refreshVersions();
             VersionSetting vs = repository.specializeVersionSetting(name);
             repository.undoMark(name);
             if (vs != null)
-                vs.setGameDirType(EnumGameDirectory.VERSION_FOLDER);
+                vs.setGameDirType(GameDirectoryType.VERSION_FOLDER);
         };
 
         ExceptionalConsumer<Exception, ?> failure = ex -> {
             if (ex instanceof CurseCompletionException && !(ex.getCause() instanceof FileNotFoundException)) {
                 success.run();
                 // This is tolerable and we will not delete the game
-            } else {
-                SLauncherGameRepository repository = profile.getRepository();
-                repository.removeVersionFromDisk(name);
+            }
+        };
+
+        return new ServerModpackRemoteInstallTask(profile.getDependency(), manifest, name)
+                .whenComplete(Schedulers.defaultScheduler(), success, failure);
+    }
+
+    public static Task<Void> getInstallTask(Profile profile, File zipFile, String name, Modpack modpack) {
+        profile.getRepository().markVersionAsModpack(name);
+
+        ExceptionalRunnable<?> success = () -> {
+            SLGameRepository repository = profile.getRepository();
+            repository.refreshVersions();
+            VersionSetting vs = repository.specializeVersionSetting(name);
+            repository.undoMark(name);
+            if (vs != null)
+                vs.setGameDirType(GameDirectoryType.VERSION_FOLDER);
+        };
+
+        ExceptionalConsumer<Exception, ?> failure = ex -> {
+            if (ex instanceof CurseCompletionException && !(ex.getCause() instanceof FileNotFoundException)) {
+                success.run();
+                // This is tolerable and we will not delete the game
             }
         };
 
         if (modpack.getManifest() instanceof CurseManifest)
             return new CurseInstallTask(profile.getDependency(), zipFile, modpack, ((CurseManifest) modpack.getManifest()), name)
                     .whenComplete(Schedulers.defaultScheduler(), success, failure);
-        else if (modpack.getManifest() instanceof SLauncherModpackManifest)
-            return new SLauncherModpackInstallTask(profile, zipFile, modpack, name)
+        else if (modpack.getManifest() instanceof SLModpackManifest)
+            return new SLModpackInstallTask(profile, zipFile, modpack, name)
                     .whenComplete(Schedulers.defaultScheduler(), success, failure);
         else if (modpack.getManifest() instanceof MultiMCInstanceConfiguration)
             return new MultiMCModpackInstallTask(profile.getDependency(), zipFile, modpack, ((MultiMCInstanceConfiguration) modpack.getManifest()), name)
                     .whenComplete(Schedulers.defaultScheduler(), success, failure)
-                    .then(new MultiMCInstallVersionSettingTask(profile, ((MultiMCInstanceConfiguration) modpack.getManifest()), name));
-        else throw new IllegalStateException("Unrecognized modpack: " + modpack);
+                    .thenComposeAsync(new MultiMCInstallVersionSettingTask(profile, ((MultiMCInstanceConfiguration) modpack.getManifest()), name));
+        else if (modpack.getManifest() instanceof ServerModpackManifest)
+            return new ServerModpackLocalInstallTask(profile.getDependency(), zipFile, modpack, ((ServerModpackManifest) modpack.getManifest()), name)
+                    .whenComplete(Schedulers.defaultScheduler(), success, failure);
+        else throw new IllegalArgumentException("Unrecognized modpack: " + modpack.getManifest());
     }
 
-    public static Task getUpdateTask(Profile profile, File zipFile, Charset charset, String name, ModpackConfiguration<?> configuration) throws UnsupportedModpackException, MismatchedModpackTypeException {
+    public static Task<Void> getUpdateTask(Profile profile, File zipFile, Charset charset, String name, ModpackConfiguration<?> configuration) throws UnsupportedModpackException, MismatchedModpackTypeException {
         Modpack modpack = ModpackHelper.readModpackManifest(zipFile.toPath(), charset);
 
         switch (configuration.getType()) {
@@ -119,11 +155,11 @@ public final class ModpackHelper {
                     throw new MismatchedModpackTypeException(MultiMCModpackInstallTask.MODPACK_TYPE, getManifestType(modpack.getManifest()));
 
                 return new ModpackUpdateTask(profile.getRepository(), name, new MultiMCModpackInstallTask(profile.getDependency(), zipFile, modpack, (MultiMCInstanceConfiguration) modpack.getManifest(), name));
-            case SLauncherModpackInstallTask.MODPACK_TYPE:
-                if (!(modpack.getManifest() instanceof SLauncherModpackManifest))
-                    throw new MismatchedModpackTypeException(SLauncherModpackInstallTask.MODPACK_TYPE, getManifestType(modpack.getManifest()));
+            case SLModpackInstallTask.MODPACK_TYPE:
+                if (!(modpack.getManifest() instanceof SLModpackManifest))
+                    throw new MismatchedModpackTypeException(SLModpackInstallTask.MODPACK_TYPE, getManifestType(modpack.getManifest()));
 
-                return new ModpackUpdateTask(profile.getRepository(), name, new SLauncherModpackInstallTask(profile, zipFile, modpack, name));
+                return new ModpackUpdateTask(profile.getRepository(), name, new SLModpackInstallTask(profile, zipFile, modpack, name));
             default:
                 throw new UnsupportedModpackException();
         }
@@ -131,7 +167,7 @@ public final class ModpackHelper {
 
     public static void toVersionSetting(MultiMCInstanceConfiguration c, VersionSetting vs) {
         vs.setUsesGlobal(false);
-        vs.setGameDirType(EnumGameDirectory.VERSION_FOLDER);
+        vs.setGameDirType(GameDirectoryType.VERSION_FOLDER);
 
         if (c.isOverrideJavaLocation()) {
             vs.setJavaDir(Lang.nonNull(c.getJavaPath(), ""));

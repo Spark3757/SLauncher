@@ -16,13 +16,17 @@ import javafx.scene.control.SkinBase;
 import javafx.scene.layout.VBox;
 import ru.spark.slauncher.util.javafx.MappedObservableList;
 
+import java.util.function.Consumer;
+
 @DefaultProperty("content")
 public class ComponentList extends Control {
-    public final ObservableList<Node> content = FXCollections.observableArrayList();
     private final StringProperty title = new SimpleStringProperty(this, "title", "Group");
     private final StringProperty subtitle = new SimpleStringProperty(this, "subtitle", "");
     private final IntegerProperty depth = new SimpleIntegerProperty(this, "depth", 0);
     private boolean hasSubtitle = false;
+    public final ObservableList<Node> content = FXCollections.observableArrayList();
+    private boolean expanded = false;
+    private Consumer<ComponentList> lazyInitializer;
 
     public ComponentList() {
         getStyleClass().add("options-list");
@@ -32,36 +36,36 @@ public class ComponentList extends Control {
         return title.get();
     }
 
-    public void setTitle(String title) {
-        this.title.set(title);
-    }
-
     public StringProperty titleProperty() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title.set(title);
     }
 
     public String getSubtitle() {
         return subtitle.get();
     }
 
-    public void setSubtitle(String subtitle) {
-        this.subtitle.set(subtitle);
-    }
-
     public StringProperty subtitleProperty() {
         return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle.set(subtitle);
     }
 
     public int getDepth() {
         return depth.get();
     }
 
-    public void setDepth(int depth) {
-        this.depth.set(depth);
-    }
-
     public IntegerProperty depthProperty() {
         return depth;
+    }
+
+    public void setDepth(int depth) {
+        this.depth.set(depth);
     }
 
     public boolean isHasSubtitle() {
@@ -76,6 +80,18 @@ public class ComponentList extends Control {
         return content;
     }
 
+    public void setLazyInitializer(Consumer<ComponentList> lazyInitializer) {
+        this.lazyInitializer = lazyInitializer;
+    }
+
+    public void onExpand() {
+        if (!expanded && lazyInitializer != null) {
+            lazyInitializer.accept(this);
+        }
+
+        expanded = true;
+    }
+
     @Override
     protected javafx.scene.control.Skin<?> createDefaultSkin() {
         return new Skin(this);
@@ -83,9 +99,11 @@ public class ComponentList extends Control {
 
     protected static class Skin extends SkinBase<ComponentList> {
         private static final PseudoClass PSEUDO_CLASS_FIRST = PseudoClass.getPseudoClass("first");
+        private static final PseudoClass PSEUDO_CLASS_LAST = PseudoClass.getPseudoClass("last");
 
         private final ObservableList<Node> list;
         private final ObjectBinding<Node> firstItem;
+        private final ObjectBinding<Node> lastItem;
 
         protected Skin(ComponentList control) {
             super(control);
@@ -105,6 +123,16 @@ public class ComponentList extends Control {
             });
             if (!list.isEmpty())
                 list.get(0).pseudoClassStateChanged(PSEUDO_CLASS_FIRST, true);
+
+            lastItem = Bindings.valueAt(list, Bindings.subtract(Bindings.size(list), 1));
+            lastItem.addListener((observable, oldValue, newValue) -> {
+                if (newValue != null)
+                    newValue.pseudoClassStateChanged(PSEUDO_CLASS_LAST, true);
+                if (oldValue != null)
+                    oldValue.pseudoClassStateChanged(PSEUDO_CLASS_LAST, false);
+            });
+            if (!list.isEmpty())
+                list.get(list.size() - 1).pseudoClassStateChanged(PSEUDO_CLASS_LAST, true);
 
             VBox vbox = new VBox();
             Bindings.bindContent(vbox.getChildren(), list);

@@ -1,7 +1,7 @@
 package ru.spark.slauncher.download;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class AbstractDependencyManager implements DependencyManager {
 

@@ -7,7 +7,7 @@ import javafx.event.EventType;
 /**
  * Indicates a close operation on the navigator page.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class PageCloseEvent extends Event {
 

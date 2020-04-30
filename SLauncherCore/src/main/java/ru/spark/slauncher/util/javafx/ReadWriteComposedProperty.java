@@ -8,7 +8,7 @@ import javafx.beans.value.WeakChangeListener;
 import java.util.function.Consumer;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class ReadWriteComposedProperty<T> extends SimpleObjectProperty<T> {
 

@@ -3,6 +3,8 @@ package ru.spark.slauncher.auth.offline;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.AuthInfo;
 import ru.spark.slauncher.auth.AuthenticationException;
+import ru.spark.slauncher.util.Lang;
+import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.ToStringBuilder;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
@@ -12,8 +14,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
-import static ru.spark.slauncher.util.Lang.mapOf;
-import static ru.spark.slauncher.util.Pair.pair;
 
 /**
  * @author huang
@@ -64,9 +64,9 @@ public class OfflineAccount extends Account {
 
     @Override
     public Map<Object, Object> toStorage() {
-        return mapOf(
-                pair("uuid", UUIDTypeAdapter.fromUUID(uuid)),
-                pair("username", username)
+        return Lang.mapOf(
+                Pair.pair("uuid", UUIDTypeAdapter.fromUUID(uuid)),
+                Pair.pair("username", username)
         );
     }
 

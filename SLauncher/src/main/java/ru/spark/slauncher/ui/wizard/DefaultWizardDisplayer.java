@@ -7,7 +7,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import ru.spark.slauncher.ui.FXUtils;
-import ru.spark.slauncher.ui.animation.TransitionHandler;
+import ru.spark.slauncher.ui.animation.TransitionPane;
 import ru.spark.slauncher.util.StringUtils;
 
 import java.util.Queue;
@@ -21,10 +21,8 @@ public class DefaultWizardDisplayer extends StackPane implements AbstractWizardD
 
     private Node nowPage;
 
-    private TransitionHandler transitionHandler;
-
     @FXML
-    private StackPane root;
+    private TransitionPane root;
     @FXML
     private JFXButton backButton;
     @FXML
@@ -69,7 +67,7 @@ public class DefaultWizardDisplayer extends StackPane implements AbstractWizardD
     @Override
     public void navigateTo(Node page, Navigation.NavigationDirection nav) {
         backButton.setDisable(!wizardController.canPrev());
-        transitionHandler.setContent(page, nav.getAnimation().getAnimationProducer());
+        root.setContent(page, nav.getAnimation().getAnimationProducer());
         String title = StringUtils.isBlank(prefix) ? "" : prefix + " - ";
         if (page instanceof WizardPage)
             titleLabel.setText(title + ((WizardPage) page).getTitle());
@@ -79,7 +77,6 @@ public class DefaultWizardDisplayer extends StackPane implements AbstractWizardD
 
     @FXML
     private void initialize() {
-        transitionHandler = new TransitionHandler(root);
         wizardController.onStart();
     }
 

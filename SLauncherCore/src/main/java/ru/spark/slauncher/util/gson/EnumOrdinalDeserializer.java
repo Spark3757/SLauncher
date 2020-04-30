@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * A deserializer that supports deserializing strings and **numbers** into enums.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class EnumOrdinalDeserializer<T extends Enum<T>> implements JsonDeserializer<T> {
 

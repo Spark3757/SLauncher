@@ -1,20 +1,21 @@
 package ru.spark.slauncher.download.optifine;
 
+import ru.spark.slauncher.download.DefaultDependencyManager;
+import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.RemoteVersion;
+import ru.spark.slauncher.game.Version;
+import ru.spark.slauncher.task.Task;
 
-import java.util.function.Supplier;
+import java.util.List;
 
 public class OptiFineRemoteVersion extends RemoteVersion {
-    private final Supplier<String> url;
 
-    public OptiFineRemoteVersion(String gameVersion, String selfVersion, Supplier<String> url, boolean snapshot) {
-        super(gameVersion, selfVersion, "", snapshot ? Type.SNAPSHOT : Type.RELEASE);
-
-        this.url = url;
+    public OptiFineRemoteVersion(String gameVersion, String selfVersion, List<String> urls, boolean snapshot) {
+        super(LibraryAnalyzer.LibraryType.OPTIFINE.getPatchId(), gameVersion, selfVersion, snapshot ? Type.SNAPSHOT : Type.RELEASE, urls);
     }
 
     @Override
-    public String getUrl() {
-        return url.get();
+    public Task<Version> getInstallTask(DefaultDependencyManager dependencyManager, Version baseVersion) {
+        return new OptiFineInstallTask(dependencyManager, baseVersion, this);
     }
 }

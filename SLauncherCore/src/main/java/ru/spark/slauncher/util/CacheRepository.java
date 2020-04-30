@@ -32,21 +32,11 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static ru.spark.slauncher.util.Logging.LOG;
 
 public class CacheRepository {
-    public static final String SHA1 = "SHA-1";
-    private static CacheRepository instance = new CacheRepository();
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private Path commonDirectory;
     private Path cacheDirectory;
     private Path indexFile;
     private Map<String, ETagItem> index;
-
-    public static CacheRepository getInstance() {
-        return instance;
-    }
-
-    public static void setInstance(CacheRepository instance) {
-        CacheRepository.instance = instance;
-    }
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     public void changeDirectory(Path commonDir) {
         commonDirectory = commonDir;
@@ -256,7 +246,7 @@ public class CacheRepository {
         try (RandomAccessFile file = new RandomAccessFile(indexFile.toFile(), "rw"); FileChannel channel = file.getChannel()) {
             FileLock lock = channel.lock();
             try {
-                ETagIndex indexOnDisk = JsonUtils.GSON.fromJson(new String(IOUtils.readFullyWithoutClosing(Channels.newInputStream(channel)), UTF_8), ETagIndex.class);
+                ETagIndex indexOnDisk = JsonUtils.fromMaybeMalformedJson(new String(IOUtils.readFullyWithoutClosing(Channels.newInputStream(channel)), UTF_8), ETagIndex.class);
                 Map<String, ETagItem> newIndex = joinETagIndexes(indexOnDisk == null ? null : indexOnDisk.eTag, index.values());
                 channel.truncate(0);
                 OutputStream os = Channels.newOutputStream(channel);
@@ -334,4 +324,16 @@ public class CacheRepository {
             return Objects.hash(url, eTag, hash, localLastModified, remoteLastModified);
         }
     }
+
+    private static CacheRepository instance = new CacheRepository();
+
+    public static CacheRepository getInstance() {
+        return instance;
+    }
+
+    public static void setInstance(CacheRepository instance) {
+        CacheRepository.instance = instance;
+    }
+
+    public static final String SHA1 = "SHA-1";
 }

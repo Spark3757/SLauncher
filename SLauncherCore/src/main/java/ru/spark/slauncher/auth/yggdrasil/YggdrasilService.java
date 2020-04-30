@@ -6,6 +6,9 @@ import com.google.gson.JsonParseException;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.ServerDisconnectException;
 import ru.spark.slauncher.auth.ServerResponseMalformedException;
+import ru.spark.slauncher.util.Lang;
+import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
 import ru.spark.slauncher.util.gson.ValidationTypeAdapterFactory;
@@ -21,14 +24,10 @@ import java.util.logging.Level;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.unmodifiableList;
-import static ru.spark.slauncher.util.Lang.mapOf;
-import static ru.spark.slauncher.util.Lang.threadPool;
-import static ru.spark.slauncher.util.Logging.LOG;
-import static ru.spark.slauncher.util.Pair.pair;
 
 public class YggdrasilService {
 
-    private static final ThreadPoolExecutor POOL = threadPool("ProfileProperties", true, 2, 10, TimeUnit.SECONDS);
+    private static final ThreadPoolExecutor POOL = Lang.threadPool("ProfileProperties", true, 2, 10, TimeUnit.SECONDS);
 
     public static final YggdrasilService MOJANG = new YggdrasilService(new MojangYggdrasilProvider());
 
@@ -39,10 +38,10 @@ public class YggdrasilService {
         this.provider = provider;
         this.profileRepository = new ObservableOptionalCache<>(
                 uuid -> {
-                    LOG.info("Fetching properties of " + uuid + " from " + provider);
+                    Logging.LOG.info("Fetching properties of " + uuid + " from " + provider);
                     return getCompleteGameProfile(uuid);
                 },
-                (uuid, e) -> LOG.log(Level.WARNING, "Failed to fetch properties of " + uuid + " from " + provider, e),
+                (uuid, e) -> Logging.LOG.log(Level.WARNING, "Failed to fetch properties of " + uuid + " from " + provider, e),
                 POOL);
     }
 
@@ -56,9 +55,9 @@ public class YggdrasilService {
         Objects.requireNonNull(clientToken);
 
         Map<String, Object> request = new HashMap<>();
-        request.put("agent", mapOf(
-                pair("name", "Minecraft"),
-                pair("version", 1)
+        request.put("agent", Lang.mapOf(
+                Pair.pair("name", "Minecraft"),
+                Pair.pair("version", 1)
         ));
         request.put("username", username);
         request.put("password", password);
@@ -68,10 +67,12 @@ public class YggdrasilService {
         return handleAuthenticationResponse(request(provider.getAuthenticationURL(), request), clientToken);
     }
 
-    private static final Gson GSON = new GsonBuilder()
-            .registerTypeAdapter(UUID.class, UUIDTypeAdapter.INSTANCE)
-            .registerTypeAdapterFactory(ValidationTypeAdapterFactory.INSTANCE)
-            .create();
+    private static Map<String, Object> createRequestWithCredentials(String accessToken, String clientToken) {
+        Map<String, Object> request = new HashMap<>();
+        request.put("accessToken", accessToken);
+        request.put("clientToken", clientToken);
+        return request;
+    }
 
     public YggdrasilSession refresh(String accessToken, String clientToken, GameProfile characterToSelect) throws AuthenticationException {
         Objects.requireNonNull(accessToken);
@@ -81,9 +82,9 @@ public class YggdrasilService {
         request.put("requestUser", true);
 
         if (characterToSelect != null) {
-            request.put("selectedProfile", mapOf(
-                    pair("id", characterToSelect.getId()),
-                    pair("name", characterToSelect.getName())));
+            request.put("selectedProfile", Lang.mapOf(
+                    Pair.pair("id", characterToSelect.getId()),
+                    Pair.pair("name", characterToSelect.getName())));
         }
 
         YggdrasilSession response = handleAuthenticationResponse(request(provider.getRefreshmentURL(), request), clientToken);
@@ -126,11 +127,18 @@ public class YggdrasilService {
         requireEmpty(request(provider.getInvalidationURL(), createRequestWithCredentials(accessToken, clientToken)));
     }
 
-    private static Map<String, Object> createRequestWithCredentials(String accessToken, String clientToken) {
-        Map<String, Object> request = new HashMap<>();
-        request.put("accessToken", accessToken);
-        request.put("clientToken", clientToken);
-        return request;
+    /**
+     * Get complete game profile.
+     * <p>
+     * Game profile provided from authentication is not complete (no skin data in properties).
+     *
+     * @param uuid the uuid that the character corresponding to.
+     * @return the complete game profile(filled with more properties)
+     */
+    public Optional<CompleteGameProfile> getCompleteGameProfile(UUID uuid) throws AuthenticationException {
+        Objects.requireNonNull(uuid);
+
+        return Optional.ofNullable(fromJson(request(provider.getProfilePropertiesURL(uuid), null), CompleteGameProfile.class));
     }
 
     public static Optional<Map<TextureType, Texture>> getTextures(CompleteGameProfile profile) throws ServerResponseMalformedException {
@@ -221,18 +229,9 @@ public class YggdrasilService {
         public String cause;
     }
 
-    /**
-     * Get complete game profile.
-     * <p>
-     * Game profile provided from authentication is not complete (no skin data in properties).
-     *
-     * @param uuid the uuid that the character corresponding to.
-     * @return the complete game profile(filled with more properties)
-     */
-    public Optional<CompleteGameProfile> getCompleteGameProfile(UUID uuid) throws AuthenticationException {
-        Objects.requireNonNull(uuid);
-
-        return Optional.ofNullable(fromJson(request(provider.getProfilePropertiesURL(uuid), null), CompleteGameProfile.class));
-    }
+    private static final Gson GSON = new GsonBuilder()
+            .registerTypeAdapter(UUID.class, UUIDTypeAdapter.INSTANCE)
+            .registerTypeAdapterFactory(ValidationTypeAdapterFactory.INSTANCE)
+            .create();
 
 }

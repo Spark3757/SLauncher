@@ -4,7 +4,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 import ru.spark.slauncher.download.DownloadProvider;
 import ru.spark.slauncher.task.FileDownloadTask;
-import ru.spark.slauncher.task.FileDownloadTask.IntegrityCheck;
+import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.NetworkUtils;
 
@@ -17,14 +17,12 @@ import java.util.Optional;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 
-import static ru.spark.slauncher.util.Logging.LOG;
-
 public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvider {
 
     private static final String LATEST_BUILD_URL = "https://authlib-injector.yushi.moe/artifact/latest.json";
 
-    private Path artifactLocation;
-    private Supplier<DownloadProvider> downloadProvider;
+    private final Path artifactLocation;
+    private final Supplier<DownloadProvider> downloadProvider;
 
     /**
      * The flag will be reset after application restart.
@@ -49,11 +47,11 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
                     update(local);
                     updateChecked = true;
                 } catch (IOException e) {
-                    LOG.log(Level.WARNING, "Failed to download authlib-injector", e);
+                    Logging.LOG.log(Level.WARNING, "Failed to download authlib-injector", e);
                     if (!local.isPresent()) {
                         throw e;
                     }
-                    LOG.warning("Fallback to use cached artifact: " + local.get());
+                    Logging.LOG.warning("Fallback to use cached artifact: " + local.get());
                 }
             }
 
@@ -67,7 +65,7 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
     }
 
     private void update(Optional<AuthlibInjectorArtifactInfo> local) throws IOException {
-        LOG.info("Checking update of authlib-injector");
+        Logging.LOG.info("Checking update of authlib-injector");
         AuthlibInjectorVersionInfo latest = getLatestArtifactInfo();
 
         if (local.isPresent() && local.get().getBuildNumber() >= latest.buildNumber) {
@@ -77,14 +75,14 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
         try {
             new FileDownloadTask(new URL(downloadProvider.get().injectURL(latest.downloadUrl)), artifactLocation.toFile(),
                     Optional.ofNullable(latest.checksums.get("sha256"))
-                            .map(checksum -> new IntegrityCheck("SHA-256", checksum))
+                            .map(checksum -> new FileDownloadTask.IntegrityCheck("SHA-256", checksum))
                             .orElse(null))
                     .run();
         } catch (Exception e) {
             throw new IOException("Failed to download authlib-injector", e);
         }
 
-        LOG.info("Updated authlib-injector to " + latest.version);
+        Logging.LOG.info("Updated authlib-injector to " + latest.version);
     }
 
     private AuthlibInjectorVersionInfo getLatestArtifactInfo() throws IOException {
@@ -105,9 +103,13 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
         try {
             return Optional.of(AuthlibInjectorArtifactInfo.from(artifactLocation));
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
+            Logging.LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
             return Optional.empty();
         }
+    }
+
+    public static boolean isArtifactsDirectory(Path artifactsDirectory) {
+        return Files.exists(artifactsDirectory.resolve("authlib-injector.jar"));
     }
 
     private static class AuthlibInjectorVersionInfo {

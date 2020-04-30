@@ -14,14 +14,13 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ForgeVersionList extends VersionList<ForgeRemoteVersion> {
+    private final DownloadProvider downloadProvider;
 
-    public static final ForgeVersionList INSTANCE = new ForgeVersionList();
-    public static final String FORGE_LIST = "https://files.minecraftforge.net/maven/net/minecraftforge/forge/json";
-
-    private ForgeVersionList() {
+    public ForgeVersionList(DownloadProvider downloadProvider) {
+        this.downloadProvider = downloadProvider;
     }
 
     @Override
@@ -30,12 +29,12 @@ public final class ForgeVersionList extends VersionList<ForgeRemoteVersion> {
     }
 
     @Override
-    public Task refreshAsync(DownloadProvider downloadProvider) {
+    public Task<?> refreshAsync() {
         final GetTask task = new GetTask(NetworkUtils.toURL(downloadProvider.injectURL(FORGE_LIST)));
-        return new Task() {
+        return new Task<Void>() {
 
             @Override
-            public Collection<Task> getDependents() {
+            public Collection<Task<?>> getDependents() {
                 return Collections.singleton(task);
             }
 
@@ -61,13 +60,13 @@ public final class ForgeVersionList extends VersionList<ForgeRemoteVersion> {
                                     String classifier = version.getGameVersion() + "-" + version.getVersion()
                                             + (StringUtils.isNotBlank(version.getBranch()) ? "-" + version.getBranch() : "");
                                     String fileName = root.getArtifact() + "-" + classifier + "-" + file[1] + "." + file[0];
-                                    jar = downloadProvider.injectURL(root.getWebPath() + classifier + "/" + fileName);
+                                    jar = root.getWebPath() + classifier + "/" + fileName;
                                 }
 
                             if (jar == null)
                                 continue;
                             versions.put(gameVersion, new ForgeRemoteVersion(
-                                    version.getGameVersion(), version.getVersion(), jar
+                                    version.getGameVersion(), version.getVersion(), Collections.singletonList(jar)
                             ));
                         }
                     }
@@ -78,4 +77,6 @@ public final class ForgeVersionList extends VersionList<ForgeRemoteVersion> {
 
         };
     }
+
+    public static final String FORGE_LIST = "https://files.minecraftforge.net/maven/net/minecraftforge/forge/json";
 }

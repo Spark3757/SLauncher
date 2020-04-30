@@ -1,7 +1,7 @@
 package ru.spark.slauncher.game;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class GameException extends Exception {
 

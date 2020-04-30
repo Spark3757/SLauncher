@@ -9,6 +9,8 @@ import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.ServerResponseMalformedException;
 import ru.spark.slauncher.auth.yggdrasil.*;
 import ru.spark.slauncher.task.FileDownloadTask;
+import ru.spark.slauncher.util.Lang;
+import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.ResourceNotFoundError;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.javafx.BindingMapping;
@@ -18,7 +20,6 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,15 +35,14 @@ import java.util.logging.Level;
 import static java.util.Collections.emptyMap;
 import static java.util.Collections.singletonMap;
 import static java.util.Objects.requireNonNull;
-import static ru.spark.slauncher.util.Lang.threadPool;
-import static ru.spark.slauncher.util.Logging.LOG;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class TexturesLoader {
 
-    private static final ThreadPoolExecutor POOL = threadPool("TexturesDownload", true, 2, 10, TimeUnit.SECONDS);
+    private static final ThreadPoolExecutor POOL = Lang.threadPool("TexturesDownload", true, 2, 10, TimeUnit.SECONDS);
+    private static final Path TEXTURES_DIR = Metadata.MINECRAFT_DIRECTORY.resolve("assets").resolve("skins");
     // ==== Skins ====
     private final static Map<TextureModel, LoadedTexture> DEFAULT_SKINS = new EnumMap<>(TextureModel.class);
 
@@ -50,32 +50,19 @@ public final class TexturesLoader {
         loadDefaultSkin("/assets/img/steve.png", TextureModel.STEVE);
         loadDefaultSkin("/assets/img/alex.png", TextureModel.ALEX);
     }
-    private static final Path TEXTURES_DIR = Metadata.MINECRAFT_DIRECTORY.resolve("assets").resolve("skins");
 
     private TexturesLoader() {
     }
 
     private static Path getTexturePath(Texture texture) {
         String url = texture.getUrl();
-        int slash = 0;
-        if (url != null) {
-            slash = url.lastIndexOf('/');
-        }
-        int dot = 0;
-        if (url != null) {
-            dot = url.lastIndexOf('.');
-        }
+        int slash = url.lastIndexOf('/');
+        int dot = url.lastIndexOf('.');
         if (dot < slash) {
             dot = url.length();
         }
-        String hash = null;
-        if (url != null) {
-            hash = url.substring(slash + 1, dot);
-        }
-        String prefix = null;
-        if (hash != null) {
-            prefix = hash.length() > 2 ? hash.substring(0, 2) : "xx";
-        }
+        String hash = url.substring(slash + 1, dot);
+        String prefix = hash.length() > 2 ? hash.substring(0, 2) : "xx";
         return TEXTURES_DIR.resolve(prefix).resolve(hash);
     }
     // ====
@@ -90,11 +77,11 @@ public final class TexturesLoader {
             // download it
             try {
                 new FileDownloadTask(new URL(texture.getUrl()), file.toFile()).run();
-                LOG.info("Texture downloaded: " + texture.getUrl());
+                Logging.LOG.info("Texture downloaded: " + texture.getUrl());
             } catch (Exception e) {
                 if (Files.isRegularFile(file)) {
                     // concurrency conflict?
-                    LOG.log(Level.WARNING, "Failed to download texture " + texture.getUrl() + ", but the file is available", e);
+                    Logging.LOG.log(Level.WARNING, "Failed to download texture " + texture.getUrl() + ", but the file is available", e);
                 } else {
                     throw new IOException("Failed to download texture " + texture.getUrl());
                 }
@@ -105,6 +92,9 @@ public final class TexturesLoader {
         try (InputStream in = Files.newInputStream(file)) {
             img = ImageIO.read(in);
         }
+        if (img == null)
+            throw new IOException("Texture is malformed");
+
         Map<String, String> metadata = texture.getMetadata();
         if (metadata == null) {
             metadata = emptyMap();
@@ -112,25 +102,40 @@ public final class TexturesLoader {
         return new LoadedTexture(img, metadata);
     }
 
+    private static void loadDefaultSkin(String path, TextureModel model) {
+        try (InputStream in = ResourceNotFoundError.getResourceAsStream(path)) {
+            DEFAULT_SKINS.put(model, new LoadedTexture(ImageIO.read(in), singletonMap("model", model.modelName)));
+        } catch (Throwable e) {
+            throw new ResourceNotFoundError("Cannoot load default skin from " + path, e);
+        }
+    }
+
+    public static LoadedTexture getDefaultSkin(TextureModel model) {
+        return DEFAULT_SKINS.get(model);
+    }
+
     public static ObjectBinding<LoadedTexture> skinBinding(YggdrasilService service, UUID uuid) {
         LoadedTexture uuidFallback = getDefaultSkin(TextureModel.detectUUID(uuid));
         return BindingMapping.of(service.getProfileRepository().binding(uuid))
-                .map(profile -> profile.flatMap(it -> {
-                    try {
-                        return YggdrasilService.getTextures(it);
-                    } catch (ServerResponseMalformedException | NullPointerException e) {
-                        LOG.log(Level.WARNING, "Failed to parse texture payload", e);
-                        return Optional.empty();
-                    }
-                }).flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN))).filter(it -> StringUtils.isNotBlank(it.getUrl())))
+                .map(profile -> profile
+                        .flatMap(it -> {
+                            try {
+                                return YggdrasilService.getTextures(it);
+                            } catch (ServerResponseMalformedException e) {
+                                Logging.LOG.log(Level.WARNING, "Failed to parse texture payload", e);
+                                return Optional.empty();
+                            }
+                        })
+                        .flatMap(it -> Optional.ofNullable(it.get(TextureType.SKIN)))
+                        .filter(it -> StringUtils.isNotBlank(it.getUrl())))
                 .asyncMap(it -> {
                     if (it.isPresent()) {
-                        Texture texture = (Texture) it.get();
+                        Texture texture = it.get();
                         return CompletableFuture.supplyAsync(() -> {
                             try {
                                 return loadTexture(texture);
                             } catch (IOException e) {
-                                LOG.log(Level.WARNING, "Failed to load texture " + texture.getUrl() + ", using fallback texture", e);
+                                Logging.LOG.log(Level.WARNING, "Failed to load texture " + texture.getUrl() + ", using fallback texture", e);
                                 return uuidFallback;
                             }
                         }, POOL);
@@ -139,38 +144,6 @@ public final class TexturesLoader {
                     }
                 }, uuidFallback);
     }
-
-    private static void loadDefaultSkin(String path, TextureModel model) {
-        try (InputStream in = ResourceNotFoundError.getResourceAsStream(path)) {
-            DEFAULT_SKINS.put(model, new LoadedTexture(ImageIO.read(in), singletonMap("model", model.modelName)));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    public static LoadedTexture getDefaultSkin(TextureModel model) {
-        return DEFAULT_SKINS.get(model);
-    }
-
-    // ==== Texture Loading ====
-    public static class LoadedTexture {
-        private final BufferedImage image;
-        private final Map<String, String> metadata;
-
-        public LoadedTexture(BufferedImage image, Map<String, String> metadata) {
-            this.image = requireNonNull(image);
-            this.metadata = requireNonNull(metadata);
-        }
-
-        public BufferedImage getImage() {
-            return image;
-        }
-
-        public Map<String, String> getMetadata() {
-            return metadata;
-        }
-    }
-    // ====
 
     // ==== Avatar ====
     public static BufferedImage toAvatar(BufferedImage skin, int size) {
@@ -190,6 +163,7 @@ public final class TexturesLoader {
         g.dispose();
         return avatar;
     }
+    // ====
 
     public static ObjectBinding<Image> fxAvatarBinding(YggdrasilService service, UUID uuid, int size) {
         return BindingMapping.of(skinBinding(service, uuid))
@@ -203,6 +177,25 @@ public final class TexturesLoader {
         } else {
             return Bindings.createObjectBinding(
                     () -> SwingFXUtils.toFXImage(toAvatar(getDefaultSkin(TextureModel.detectUUID(account.getUUID())).image, size), null));
+        }
+    }
+
+    // ==== Texture Loading ====
+    public static class LoadedTexture {
+        private final BufferedImage image;
+        private final Map<String, String> metadata;
+
+        public LoadedTexture(BufferedImage image, Map<String, String> metadata) {
+            this.image = requireNonNull(image);
+            this.metadata = requireNonNull(metadata);
+        }
+
+        public BufferedImage getImage() {
+            return image;
+        }
+
+        public Map<String, String> getMetadata() {
+            return metadata;
         }
     }
     // ====

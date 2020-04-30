@@ -7,11 +7,12 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.*;
 import ru.spark.slauncher.download.DefaultDependencyManager;
+import ru.spark.slauncher.download.DownloadProvider;
 import ru.spark.slauncher.event.EventBus;
 import ru.spark.slauncher.event.EventPriority;
 import ru.spark.slauncher.event.RefreshedVersionsEvent;
-import ru.spark.slauncher.game.SLauncherCacheRepository;
-import ru.spark.slauncher.game.SLauncherGameRepository;
+import ru.spark.slauncher.game.SLCacheRepository;
+import ru.spark.slauncher.game.SLGameRepository;
 import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.WeakListenerHolder;
@@ -23,12 +24,12 @@ import java.lang.reflect.Type;
 import java.util.Optional;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(Profile.Serializer.class)
 public final class Profile implements Observable {
     private final WeakListenerHolder listenerHolder = new WeakListenerHolder();
-    private final SLauncherGameRepository repository;
+    private final SLGameRepository repository;
 
     private final StringProperty selectedVersion = new SimpleStringProperty();
     private final ObjectProperty<File> gameDir;
@@ -52,7 +53,7 @@ public final class Profile implements Observable {
     public Profile(String name, File initialGameDir, VersionSetting global, String selectedVersion, boolean useRelativePath) {
         this.name = new SimpleStringProperty(this, "name", name);
         gameDir = new SimpleObjectProperty<>(this, "gameDir", initialGameDir);
-        repository = new SLauncherGameRepository(this, initialGameDir);
+        repository = new SLGameRepository(this, initialGameDir);
         this.global.set(global == null ? new VersionSetting() : global);
         this.selectedVersion.set(selectedVersion);
         this.useRelativePath.set(useRelativePath);
@@ -134,22 +135,20 @@ public final class Profile implements Observable {
         });
     }
 
-    public SLauncherGameRepository getRepository() {
+    public SLGameRepository getRepository() {
         return repository;
     }
 
     public DefaultDependencyManager getDependency() {
-        return new DefaultDependencyManager(repository, DownloadProviders.getDownloadProvider(), SLauncherCacheRepository.REPOSITORY);
+        return getDependency(DownloadProviders.getDownloadProvider());
+    }
+
+    public DefaultDependencyManager getDependency(DownloadProvider downloadProvider) {
+        return new DefaultDependencyManager(repository, downloadProvider, SLCacheRepository.REPOSITORY);
     }
 
     public VersionSetting getVersionSetting(String id) {
-        VersionSetting vs = repository.getVersionSetting(id);
-        if (vs == null || vs.isUsesGlobal()) {
-            getGlobal().setGlobal(true); // always keep global.isGlobal = true
-            getGlobal().setUsesGlobal(true);
-            return getGlobal();
-        } else
-            return vs;
+        return repository.getVersionSetting(id);
     }
 
     @Override
@@ -201,7 +200,7 @@ public final class Profile implements Observable {
 
         @Override
         public Profile deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
-            if (json == null || json == JsonNull.INSTANCE || !(json instanceof JsonObject)) return null;
+            if (json == JsonNull.INSTANCE || !(json instanceof JsonObject)) return null;
             JsonObject obj = (JsonObject) json;
             String gameDir = Optional.ofNullable(obj.get("gameDir")).map(JsonElement::getAsString).orElse("");
 

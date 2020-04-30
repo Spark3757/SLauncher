@@ -5,27 +5,26 @@ import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskExecutor;
 import ru.spark.slauncher.task.TaskListener;
 import ru.spark.slauncher.ui.Controllers;
-import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.DialogCloseEvent;
-import ru.spark.slauncher.ui.construct.MessageDialogPane.MessageType;
+import ru.spark.slauncher.ui.construct.MessageDialogPane;
 import ru.spark.slauncher.ui.construct.TaskExecutorDialogPane;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.util.Map;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.runInFX;
 
 public interface TaskExecutorDialogWizardDisplayer extends AbstractWizardDisplayer {
 
     @Override
-    default void handleTask(Map<String, Object> settings, Task task) {
+    default void handleTask(Map<String, Object> settings, Task<?> task) {
         TaskExecutorDialogPane pane = new TaskExecutorDialogPane(it -> {
             it.fireEvent(new DialogCloseEvent());
             onEnd();
         });
 
-        pane.setTitle(i18n("message.doing"));
-        pane.setProgress(Double.MAX_VALUE);
+        pane.setTitle(I18n.i18n("message.doing"));
         if (settings.containsKey("title")) {
             Object title = settings.get("title");
             if (title instanceof StringProperty)
@@ -34,34 +33,26 @@ public interface TaskExecutorDialogWizardDisplayer extends AbstractWizardDisplay
                 pane.setTitle((String) title);
         }
 
-        if (settings.containsKey("subtitle")) {
-            Object subtitle = settings.get("subtitle");
-            if (subtitle instanceof StringProperty)
-                pane.subtitleProperty().bind((StringProperty) subtitle);
-            else if (subtitle instanceof String)
-                pane.setSubtitle((String) subtitle);
-        }
-
-        FXUtils.runInFX(() -> {
-            TaskExecutor executor = task.executor(new TaskListener() {
+        runInFX(() -> {
+            TaskExecutor executor = task.cancellableExecutor(new TaskListener() {
                 @Override
                 public void onStop(boolean success, TaskExecutor executor) {
-                    FXUtils.runInFX(() -> {
+                    runInFX(() -> {
                         if (success) {
                             if (settings.containsKey("success_message") && settings.get("success_message") instanceof String)
-                                Controllers.dialog((String) settings.get("success_message"), null, MessageType.FINE, () -> onEnd());
+                                Controllers.dialog((String) settings.get("success_message"), null, MessageDialogPane.MessageType.FINE, () -> onEnd());
                             else if (!settings.containsKey("forbid_success_message"))
-                                Controllers.dialog(i18n("message.success"), null, MessageType.FINE, () -> onEnd());
+                                Controllers.dialog(I18n.i18n("message.success"), null, MessageDialogPane.MessageType.FINE, () -> onEnd());
                         } else {
-                            if (executor.getLastException() == null)
+                            if (executor.getException() == null)
                                 return;
-                            String appendix = StringUtils.getStackTrace(executor.getLastException());
+                            String appendix = StringUtils.getStackTrace(executor.getException());
                             if (settings.get("failure_callback") instanceof WizardProvider.FailureCallback)
-                                ((WizardProvider.FailureCallback) settings.get("failure_callback")).onFail(settings, executor.getLastException(), () -> onEnd());
+                                ((WizardProvider.FailureCallback) settings.get("failure_callback")).onFail(settings, executor.getException(), () -> onEnd());
                             else if (settings.get("failure_message") instanceof String)
-                                Controllers.dialog(appendix, (String) settings.get("failure_message"), MessageType.ERROR, () -> onEnd());
+                                Controllers.dialog(appendix, (String) settings.get("failure_message"), MessageDialogPane.MessageType.ERROR, () -> onEnd());
                             else if (!settings.containsKey("forbid_failure_message"))
-                                Controllers.dialog(appendix, i18n("wizard.failed"), MessageType.ERROR, () -> onEnd());
+                                Controllers.dialog(appendix, I18n.i18n("wizard.failed"), MessageDialogPane.MessageType.ERROR, () -> onEnd());
                         }
 
                     });

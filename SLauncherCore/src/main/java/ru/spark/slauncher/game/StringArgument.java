@@ -15,7 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(StringArgument.Serializer.class)
 @Immutable

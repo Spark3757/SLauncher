@@ -6,7 +6,7 @@ import ru.spark.slauncher.util.Immutable;
 import java.util.UUID;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class AuthInfo {

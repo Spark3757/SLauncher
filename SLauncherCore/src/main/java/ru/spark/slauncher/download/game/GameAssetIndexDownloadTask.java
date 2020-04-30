@@ -6,22 +6,22 @@ import ru.spark.slauncher.game.GameRepository;
 import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.task.FileDownloadTask;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.util.io.NetworkUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
 /**
  * This task is to download asset index file provided in minecraft.json.
  *
- * @author Spark1337
+ * @author spark1337
  */
-public final class GameAssetIndexDownloadTask extends Task {
+public final class GameAssetIndexDownloadTask extends Task<Void> {
 
     private final AbstractDependencyManager dependencyManager;
     private final Version version;
-    private final List<Task> dependencies = new LinkedList<>();
+    private final List<Task<?>> dependencies = new LinkedList<>();
 
     /**
      * Constructor.
@@ -36,7 +36,7 @@ public final class GameAssetIndexDownloadTask extends Task {
     }
 
     @Override
-    public List<Task> getDependencies() {
+    public List<Task<?>> getDependencies() {
         return dependencies;
     }
 
@@ -47,10 +47,15 @@ public final class GameAssetIndexDownloadTask extends Task {
 
         // We should not check the hash code of asset index file since this file is not consistent
         // And Mojang will modify this file anytime. So assetIndex.hash might be outdated.
-        dependencies.add(new FileDownloadTask(
-                NetworkUtils.toURL(dependencyManager.getDownloadProvider().injectURL(assetIndexInfo.getUrl())),
+        FileDownloadTask task = new FileDownloadTask(
+                dependencyManager.getDownloadProvider().injectURLWithCandidates(assetIndexInfo.getUrl()),
                 assetIndexFile
-        ).setCacheRepository(dependencyManager.getCacheRepository()));
+        );
+        task.setCacheRepository(dependencyManager.getCacheRepository());
+        dependencies.add(task);
     }
 
+
+    public static class GameAssetIndexMalformedException extends IOException {
+    }
 }

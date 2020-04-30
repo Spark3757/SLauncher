@@ -1,7 +1,5 @@
 package ru.spark.slauncher.util.io;
 
-import ru.spark.slauncher.util.StringUtils;
-
 import java.io.*;
 import java.net.*;
 import java.util.List;
@@ -9,9 +7,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static ru.spark.slauncher.util.StringUtils.*;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class NetworkUtils {
 
@@ -19,37 +18,39 @@ public final class NetworkUtils {
     }
 
     public static String withQuery(String baseUrl, Map<String, String> params) {
-        try {
-            StringBuilder sb = new StringBuilder(baseUrl);
-            boolean first = true;
-            for (Entry<String, String> param : params.entrySet()) {
-                if (first) {
-                    sb.append('?');
-                    first = false;
-                } else {
-                    sb.append('&');
-                }
-                sb.append(URLEncoder.encode(param.getKey(), "UTF-8"));
-                sb.append('=');
-                sb.append(URLEncoder.encode(param.getValue(), "UTF-8"));
+        StringBuilder sb = new StringBuilder(baseUrl);
+        boolean first = true;
+        for (Entry<String, String> param : params.entrySet()) {
+            if (param.getValue() == null)
+                continue;
+            if (first) {
+                sb.append('?');
+                first = false;
+            } else {
+                sb.append('&');
             }
-            return sb.toString();
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            sb.append(encodeURL(param.getKey()));
+            sb.append('=');
+            sb.append(encodeURL(param.getValue()));
         }
+        return sb.toString();
     }
 
-    public static HttpURLConnection createConnection(URL url) throws IOException {
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    public static URLConnection createConnection(URL url) throws IOException {
+        URLConnection connection = url.openConnection();
         connection.setUseCaches(false);
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(15000);
         return connection;
     }
 
+    public static HttpURLConnection createHttpConnection(URL url) throws IOException {
+        return (HttpURLConnection) createConnection(url);
+    }
+
     /**
-     * @param location
-     * @return
+     * @param location the url to be URL encoded
+     * @return encoded URL
      * @see <a href="https://github.com/curl/curl/blob/3f7b1bb89f92c13e69ee51b710ac54f775aab320/lib/transfer.c#L1427-L1461">Curl</a>
      */
     public static String encodeLocation(String location) {
@@ -76,11 +77,11 @@ public final class NetworkUtils {
     }
 
     /**
-     * This method aims to solve problem when "Location" in stupid server's response is not encoded.
+     * This method is a work-around that aims to solve problem when "Location" in stupid server's response is not encoded.
      *
-     * @param conn
-     * @return
-     * @throws IOException
+     * @param conn the stupid http connection.
+     * @return manually redirected http connection.
+     * @throws IOException if an I/O error occurs.
      * @see <a href="https://github.com/curl/curl/issues/473">Issue with libcurl</a>
      */
     public static HttpURLConnection resolveConnection(HttpURLConnection conn) throws IOException {
@@ -92,6 +93,7 @@ public final class NetworkUtils {
             conn.setReadTimeout(15000);
             conn.setInstanceFollowRedirects(false);
             Map<String, List<String>> properties = conn.getRequestProperties();
+            String method = conn.getRequestMethod();
             int code = conn.getResponseCode();
             if (code >= 300 && code <= 307 && code != 306 && code != 304) {
                 String newURL = conn.getHeaderField("Location");
@@ -103,6 +105,7 @@ public final class NetworkUtils {
 
                 HttpURLConnection redirected = (HttpURLConnection) new URL(conn.getURL(), encodeLocation(newURL)).openConnection();
                 properties.forEach((key, value) -> value.forEach(element -> redirected.addRequestProperty(key, element)));
+                redirected.setRequestMethod(method);
                 conn = redirected;
                 ++redirect;
             } else {
@@ -113,7 +116,9 @@ public final class NetworkUtils {
     }
 
     public static String doGet(URL url) throws IOException {
-        return IOUtils.readFullyAsString(createConnection(url).getInputStream());
+        HttpURLConnection con = createHttpConnection(url);
+        con = resolveConnection(con);
+        return IOUtils.readFullyAsString(con.getInputStream());
     }
 
     public static String doPost(URL u, Map<String, String> params) throws IOException {
@@ -133,7 +138,7 @@ public final class NetworkUtils {
     public static String doPost(URL url, String post, String contentType) throws IOException {
         byte[] bytes = post.getBytes(UTF_8);
 
-        HttpURLConnection con = createConnection(url);
+        HttpURLConnection con = createHttpConnection(url);
         con.setRequestMethod("POST");
         con.setDoOutput(true);
         con.setRequestProperty("Content-Type", contentType + "; charset=utf-8");
@@ -158,9 +163,9 @@ public final class NetworkUtils {
     }
 
     public static String detectFileName(URL url) throws IOException {
-        HttpURLConnection conn = resolveConnection(createConnection(url));
+        HttpURLConnection conn = resolveConnection(createHttpConnection(url));
         int code = conn.getResponseCode();
-        if (code == 404)
+        if (code / 100 == 4)
             throw new FileNotFoundException();
         if (code / 100 != 2)
             throw new IOException(url + ": response code " + conn.getResponseCode());
@@ -172,9 +177,9 @@ public final class NetworkUtils {
         String disposition = conn.getHeaderField("Content-Disposition");
         if (disposition == null || !disposition.contains("filename=")) {
             String u = conn.getURL().toString();
-            return decodeURL(StringUtils.substringAfterLast(u, '/'));
+            return decodeURL(substringAfterLast(u, '/'));
         } else {
-            return decodeURL(StringUtils.removeSurrounding(StringUtils.substringAfter(disposition, "filename="), "\""));
+            return decodeURL(removeSurrounding(substringAfter(disposition, "filename="), "\""));
         }
     }
 
@@ -196,11 +201,11 @@ public final class NetworkUtils {
     }
 
     public static boolean urlExists(URL url) throws IOException {
-        try (InputStream stream = url.openStream()) {
-            return true;
-        } catch (FileNotFoundException e) {
-            return false;
-        }
+        HttpURLConnection con = createHttpConnection(url);
+        con = resolveConnection(con);
+        int responseCode = con.getResponseCode();
+        con.disconnect();
+        return responseCode / 100 == 2;
     }
 
     // ==== Shortcut methods for encoding/decoding URLs in UTF-8 ====

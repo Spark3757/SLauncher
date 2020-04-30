@@ -3,20 +3,22 @@ package ru.spark.slauncher.game;
 import javafx.application.Platform;
 import javafx.stage.Stage;
 import ru.spark.slauncher.Launcher;
-import ru.spark.slauncher.auth.Account;
-import ru.spark.slauncher.auth.AuthInfo;
-import ru.spark.slauncher.auth.AuthenticationException;
-import ru.spark.slauncher.auth.CredentialExpiredException;
+import ru.spark.slauncher.Metadata;
+import ru.spark.slauncher.auth.*;
+import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorDownloadException;
 import ru.spark.slauncher.download.DefaultDependencyManager;
 import ru.spark.slauncher.download.MaintainTask;
+import ru.spark.slauncher.download.game.GameAssetIndexDownloadTask;
 import ru.spark.slauncher.download.game.LibraryDownloadException;
 import ru.spark.slauncher.launch.NotDecompressingNativesException;
 import ru.spark.slauncher.launch.PermissionException;
 import ru.spark.slauncher.launch.ProcessCreationException;
 import ru.spark.slauncher.launch.ProcessListener;
-import ru.spark.slauncher.mod.CurseCompletionException;
-import ru.spark.slauncher.mod.CurseCompletionTask;
 import ru.spark.slauncher.mod.ModpackConfiguration;
+import ru.spark.slauncher.mod.curse.CurseCompletionException;
+import ru.spark.slauncher.mod.curse.CurseCompletionTask;
+import ru.spark.slauncher.mod.server.ServerModpackCompletionTask;
+import ru.spark.slauncher.setting.ConfigHolder;
 import ru.spark.slauncher.setting.LauncherVisibility;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.setting.VersionSetting;
@@ -25,11 +27,12 @@ import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.DialogController;
 import ru.spark.slauncher.ui.LogWindow;
 import ru.spark.slauncher.ui.construct.DialogCloseEvent;
-import ru.spark.slauncher.ui.construct.MessageDialogPane;
+import ru.spark.slauncher.ui.construct.MessageDialogPane.MessageType;
 import ru.spark.slauncher.ui.construct.TaskExecutorDialogPane;
 import ru.spark.slauncher.util.*;
-import ru.spark.slauncher.util.function.ExceptionalSupplier;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
+import ru.spark.slauncher.util.i18n.I18n;
+import ru.spark.slauncher.util.io.ResponseCodeException;
 import ru.spark.slauncher.util.platform.CommandBuilder;
 import ru.spark.slauncher.util.platform.JavaVersion;
 import ru.spark.slauncher.util.platform.ManagedProcess;
@@ -39,15 +42,13 @@ import ru.spark.slauncher.util.versioning.VersionNumber;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static ru.spark.slauncher.setting.ConfigHolder.config;
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import java.util.concurrent.RejectedExecutionException;
 
 public final class LauncherHelper {
 
@@ -69,6 +70,7 @@ public final class LauncherHelper {
         this.setting = profile.getVersionSetting(selectedVersion);
         this.launcherVisibility = setting.getLauncherVisibility();
         this.showLogs = setting.isShowLogs();
+        this.launchingStepsPane.setTitle(I18n.i18n("version.launch"));
     }
 
     private static void checkGameState(Profile profile, VersionSetting setting, Version version, Runnable onAccept) throws InterruptedException {
@@ -86,7 +88,7 @@ public final class LauncherHelper {
         VersionNumber gameVersion = VersionNumber.asVersion(GameVersion.minecraftVersion(profile.getRepository().getVersionJar(version)).orElse("Unknown"));
         JavaVersion java = setting.getJavaVersion();
         if (java == null) {
-            Controllers.dialog(i18n("launch.wrong_javadir"), i18n("message.warning"), MessageDialogPane.MessageType.WARNING, onAccept);
+            Controllers.dialog(I18n.i18n("launch.wrong_javadir"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
             setting.setJava(null);
             setting.setDefaultJavaPath(null);
             java = JavaVersion.fromCurrentEnvironment();
@@ -105,17 +107,17 @@ public final class LauncherHelper {
                 if (gameVersion.compareTo(VersionNumber.asVersion("1.13")) >= 0) {
                     // Minecraft 1.13 and later versions only support Java 8 or later.
                     // Terminate launching operation.
-                    Controllers.dialog(i18n("launch.advice.java8_1_13"), i18n("message.error"), MessageDialogPane.MessageType.ERROR, null);
+                    Controllers.dialog(I18n.i18n("launch.advice.java8_1_13"), I18n.i18n("message.error"), MessageType.ERROR, null);
                 } else {
                     // Most mods require Java 8 or later version.
-                    Controllers.dialog(i18n("launch.advice.newer_java"), i18n("message.warning"), MessageDialogPane.MessageType.WARNING, onAccept);
+                    Controllers.dialog(I18n.i18n("launch.advice.newer_java"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
                 }
                 flag = true;
             }
         }
 
         // LaunchWrapper 1.12 will crash because of assuming the system class loader is an instance of URLClassLoader.
-        if (!flag && java.getParsedVersion() >= JavaVersion.JAVA_9
+        if (!flag && java.getParsedVersion() >= JavaVersion.JAVA_9_AND_LATER
                 && version.getMainClass().contains("launchwrapper")
                 && version.getLibraries().stream()
                 .filter(library -> "launchwrapper".equals(library.getArtifactId()))
@@ -124,10 +126,10 @@ public final class LauncherHelper {
             if (java8.isPresent()) {
                 java8required = true;
                 setting.setJavaVersion(java8.get());
-                Controllers.dialog(i18n("launch.advice.java9") + "\n" + i18n("launch.advice.corrected"), i18n("message.info"), MessageDialogPane.MessageType.INFORMATION, onAccept);
+                Controllers.dialog(I18n.i18n("launch.advice.java9") + "\n" + I18n.i18n("launch.advice.corrected"), I18n.i18n("message.info"), MessageType.INFORMATION, onAccept);
                 flag = true;
             } else {
-                Controllers.dialog(i18n("launch.advice.java9") + "\n" + i18n("launch.advice.uncorrected"), i18n("message.error"), MessageDialogPane.MessageType.ERROR, null);
+                Controllers.dialog(I18n.i18n("launch.advice.java9") + "\n" + I18n.i18n("launch.advice.uncorrected"), I18n.i18n("message.error"), MessageType.ERROR, null);
                 flag = true;
             }
         }
@@ -142,7 +144,7 @@ public final class LauncherHelper {
                 newJavaRequired = true;
                 setting.setJavaVersion(java8.get());
             } else {
-                Controllers.dialog(i18n("launch.advice.java8_51_1_13"), i18n("message.warning"), MessageDialogPane.MessageType.WARNING, onAccept);
+                Controllers.dialog(I18n.i18n("launch.advice.java8_51_1_13"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
                 flag = true;
             }
         }
@@ -174,7 +176,7 @@ public final class LauncherHelper {
             if (java64.isPresent()) {
                 setting.setJavaVersion(java64.get());
             } else {
-                Controllers.dialog(i18n("launch.advice.different_platform"), i18n("message.error"), MessageDialogPane.MessageType.ERROR, onAccept);
+                Controllers.dialog(I18n.i18n("launch.advice.different_platform"), I18n.i18n("message.error"), MessageType.ERROR, onAccept);
                 flag = true;
             }
         }
@@ -184,13 +186,13 @@ public final class LauncherHelper {
                 setting.getMaxMemory() > 1.5 * 1024) {
             // 1.5 * 1024 is an inaccurate number.
             // Actual memory limit depends on operating system and memory.
-            Controllers.dialog(i18n("launch.advice.too_large_memory_for_32bit"), i18n("message.error"), MessageDialogPane.MessageType.ERROR, onAccept);
+            Controllers.confirm(I18n.i18n("launch.advice.too_large_memory_for_32bit"), I18n.i18n("message.error"), onAccept, null);
             flag = true;
         }
 
         // Cannot allocate too much memory exceeding free space.
         if (!flag && OperatingSystem.TOTAL_MEMORY > 0 && OperatingSystem.TOTAL_MEMORY < setting.getMaxMemory()) {
-            Controllers.dialog(i18n("launch.advice.not_enough_space", OperatingSystem.TOTAL_MEMORY), i18n("message.error"), MessageDialogPane.MessageType.ERROR, onAccept);
+            Controllers.confirm(I18n.i18n("launch.advice.not_enough_space", OperatingSystem.TOTAL_MEMORY), I18n.i18n("message.error"), onAccept, null);
             flag = true;
         }
 
@@ -202,7 +204,7 @@ public final class LauncherHelper {
                                     VersionNumber.VERSION_COMPARATOR.compare(it.getVersion(), "1.12.2-14.23.5.2773") < 0);
             boolean hasLiteLoader = version.getLibraries().stream().anyMatch(it -> it.is("com.mumfrey", "liteloader"));
             if (hasForge2760 && hasLiteLoader && gameVersion.compareTo(VersionNumber.asVersion("1.12.2")) == 0) {
-                Controllers.dialog(i18n("launch.advice.forge2760_liteloader"), i18n("message.error"), MessageDialogPane.MessageType.ERROR, onAccept);
+                Controllers.confirm(I18n.i18n("launch.advice.forge2760_liteloader"), I18n.i18n("message.error"), onAccept, null);
                 flag = true;
             }
         }
@@ -227,13 +229,14 @@ public final class LauncherHelper {
         GameRepository repository = profile.getRepository();
         Version version = repository.getResolvedVersion(selectedVersion);
         Analytics.recordMinecraftVersionLaunch(version);
+
         Platform.runLater(() -> {
             try {
                 checkGameState(profile, setting, version, () -> {
                     Controllers.dialog(launchingStepsPane);
-                    Schedulers.newThread().schedule(this::launch0);
+                    Schedulers.newThread().execute(this::launch0);
                 });
-            } catch (InterruptedException ignore) {
+            } catch (InterruptedException | RejectedExecutionException ignore) {
             }
         });
     }
@@ -245,43 +248,43 @@ public final class LauncherHelper {
     }
 
     private void launch0() {
-        SLauncherGameRepository repository = profile.getRepository();
+        SLGameRepository repository = profile.getRepository();
         DefaultDependencyManager dependencyManager = profile.getDependency();
-        Version version = MaintainTask.maintain(repository.getResolvedVersion(selectedVersion));
+        Version version = MaintainTask.maintain(repository, repository.getResolvedVersion(selectedVersion));
         Optional<String> gameVersion = GameVersion.minecraftVersion(repository.getVersionJar(version));
+        boolean integrityCheck = repository.unmarkVersionLaunchedAbnormally(selectedVersion);
+        CountDownLatch launchingLatch = new CountDownLatch(1);
 
-        TaskExecutor executor = Task.of(Schedulers.javafx(), () -> emitStatus(LoadingState.DEPENDENCIES))
-                .then(Task.of(() -> {
-                    try {
-                        File branderFile = Paths.get(OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar").toFile();
-                        if (!branderFile.exists()) {
-                            FileDownloadTask task = new FileDownloadTask(new URL("http://dl.slauncher.ru/brander.jar"), branderFile);
-                            task.execute();
-                        }
-
-                    } catch (Exception e) {
-                    }
-                }))
-                .then(() -> {
-                    if (setting.isNotCheckGame())
-                        return null;
-                    else
-                        return dependencyManager.checkGameCompletionAsync(version);
-                })
-                .then(Task.of(Schedulers.javafx(), () -> emitStatus(LoadingState.MODS)))
-                .then(() -> {
-                    try {
-                        ModpackConfiguration<?> configuration = ModpackHelper.readModpackConfiguration(repository.getModpackConfiguration(selectedVersion));
-                        if ("Curse".equals(configuration.getType()))
-                            return new CurseCompletionTask(dependencyManager, selectedVersion);
-                        else
-                            return null;
-                    } catch (IOException e) {
-                        return null;
-                    }
-                })
-                .then(Task.of(Schedulers.javafx(), () -> emitStatus(LoadingState.LOGGING_IN)))
-                .thenCompose(() -> Task.ofResult(i18n("account.methods"), () -> {
+        TaskExecutor executor = dependencyManager.checkPatchCompletionAsync(repository.getVersion(selectedVersion), integrityCheck)
+                .thenComposeAsync(Task.allOf(
+                        Task.runAsync(() -> {
+                            try {
+                                File branderFile = Paths.get(Metadata.SL_DIRECTORY.toAbsolutePath() + "/brander.jar").toFile();
+                                if (!branderFile.exists()) {
+                                    FileDownloadTask task = new FileDownloadTask(new URL("http://dl.slauncher.ru/brander.jar"), branderFile);
+                                    task.execute();
+                                }
+                            } catch (Exception ignored) {
+                            }
+                        }), Task.composeAsync(() -> {
+                            if (setting.isNotCheckGame())
+                                return null;
+                            else
+                                return dependencyManager.checkGameCompletionAsync(version, integrityCheck);
+                        }), Task.composeAsync(() -> {
+                            try {
+                                ModpackConfiguration<?> configuration = ModpackHelper.readModpackConfiguration(repository.getModpackConfiguration(selectedVersion));
+                                if ("Curse".equals(configuration.getType()))
+                                    return new CurseCompletionTask(dependencyManager, selectedVersion);
+                                else if ("Server".equals(configuration.getType()))
+                                    return new ServerModpackCompletionTask(dependencyManager, selectedVersion);
+                                else
+                                    return null;
+                            } catch (IOException e) {
+                                return null;
+                            }
+                        }))).withStage("launch.state.dependencies")
+                .thenComposeAsync(Task.supplyAsync(() -> {
                     try {
                         return account.logIn();
                     } catch (CredentialExpiredException e) {
@@ -291,31 +294,27 @@ public final class LauncherHelper {
                         Logging.LOG.warning("Authentication failed, try playing offline: " + e);
                         return account.playOffline().orElseThrow(() -> e);
                     }
-                }))
-                .thenApply(Schedulers.javafx(), authInfo -> {
-                    emitStatus(LoadingState.LAUNCHING);
-                    return authInfo;
-                })
-                .thenApply(authInfo -> new SLauncherGameLauncher(
-                        repository,
-                        selectedVersion,
-                        authInfo,
-                        setting.toLaunchOptions(profile.getGameDir()),
-                        launcherVisibility == LauncherVisibility.CLOSE
-                                ? null // Unnecessary to start listening to game process output when close launcher immediately after game launched.
-                                : new SLauncherProcessListener(authInfo, setting, gameVersion.isPresent())
-                ))
-                .thenCompose(launcher -> { // launcher is prev task's result
+                }).withStage("launch.state.logging_in"))
+                .thenComposeAsync(authInfo -> Task.supplyAsync(() -> {
+                    return new SLGameLauncher(
+                            repository,
+                            version.getPatches().isEmpty() ? repository.getResolvedVersion(selectedVersion) : version,
+                            authInfo,
+                            setting.toLaunchOptions(profile.getGameDir(), !setting.isNotCheckJVM()),
+                            launcherVisibility == LauncherVisibility.CLOSE
+                                    ? null // Unnecessary to start listening to game process output when close launcher immediately after game launched.
+                                    : new SLProcessListener(repository, selectedVersion, authInfo, launchingLatch, gameVersion.isPresent())
+                    );
+                }).thenComposeAsync(launcher -> { // launcher is prev task's result
                     if (scriptFile == null) {
-                        return new LaunchTask<>(launcher::launch).setName(i18n("version.launch"));
+                        return Task.supplyAsync(launcher::launch);
                     } else {
-                        return new LaunchTask<ManagedProcess>(() -> {
+                        return Task.supplyAsync(() -> {
                             launcher.makeLaunchScript(scriptFile);
                             return null;
-                        }).setName(i18n("version.launch_script"));
+                        });
                     }
-                })
-                .thenAccept(process -> { // process is LaunchTask's result
+                }).thenAcceptAsync(process -> { // process is LaunchTask's result
                     if (scriptFile == null) {
                         PROCESSES.add(process);
                         if (launcherVisibility == LauncherVisibility.CLOSE)
@@ -328,71 +327,98 @@ public final class LauncherHelper {
                     } else {
                         Platform.runLater(() -> {
                             launchingStepsPane.fireEvent(new DialogCloseEvent());
-                            Controllers.dialog(i18n("version.launch_script.success", scriptFile.getAbsolutePath()));
+                            Controllers.dialog(I18n.i18n("version.launch_script.success", scriptFile.getAbsolutePath()));
                         });
                     }
-                })
-                .executor();
-
+                }).thenRunAsync(Schedulers.defaultScheduler(), () -> {
+                    launchingLatch.await();
+                }).withStage("launch.state.waiting_launching"))
+                .withStagesHint(Lang.immutableListOf(
+                        "launch.state.dependencies",
+                        "launch.state.logging_in",
+                        "launch.state.waiting_launching"))
+                .cancellableExecutor();
         launchingStepsPane.setExecutor(executor, false);
         executor.addTaskListener(new TaskListener() {
-            final AtomicInteger finished = new AtomicInteger(0);
-
-            @Override
-            public void onFinished(Task task) {
-                finished.incrementAndGet();
-                int runningTasks = executor.getRunningTasks();
-                Platform.runLater(() -> launchingStepsPane.setProgress(1.0 * finished.get() / runningTasks));
-            }
 
             @Override
             public void onStop(boolean success, TaskExecutor executor) {
-                if (!success && !Controllers.isStopped()) {
-                    Platform.runLater(() -> {
-                        // Check if the application has stopped
-                        // because onStop will be invoked if tasks fail when the executor service shut down.
-                        if (!Controllers.isStopped()) {
-                            launchingStepsPane.fireEvent(new DialogCloseEvent());
-                            Exception ex = executor.getLastException();
+                Platform.runLater(() -> {
+                    // Check if the application has stopped
+                    // because onStop will be invoked if tasks fail when the executor service shut down.
+                    if (!Controllers.isStopped()) {
+                        launchingStepsPane.fireEvent(new DialogCloseEvent());
+                        if (!success) {
+                            Exception ex = executor.getException();
                             if (ex != null) {
                                 String message;
                                 if (ex instanceof CurseCompletionException) {
                                     if (ex.getCause() instanceof FileNotFoundException)
-                                        message = i18n("modpack.type.curse.not_found");
+                                        message = I18n.i18n("modpack.type.curse.not_found");
                                     else
-                                        message = i18n("modpack.type.curse.error");
+                                        message = I18n.i18n("modpack.type.curse.error");
                                 } else if (ex instanceof PermissionException) {
-                                    message = i18n("launch.failed.executable_permission");
+                                    message = I18n.i18n("launch.failed.executable_permission");
                                 } else if (ex instanceof ProcessCreationException) {
-                                    message = i18n("launch.failed.creating_process") + ex.getLocalizedMessage();
+                                    message = I18n.i18n("launch.failed.creating_process") + ex.getLocalizedMessage();
                                 } else if (ex instanceof NotDecompressingNativesException) {
-                                    message = i18n("launch.failed.decompressing_natives") + ex.getLocalizedMessage();
+                                    message = I18n.i18n("launch.failed.decompressing_natives") + ex.getLocalizedMessage();
                                 } else if (ex instanceof LibraryDownloadException) {
-                                    message = i18n("launch.failed.download_library", ((LibraryDownloadException) ex).getLibrary().getName()) + "\n" + StringUtils.getStackTrace(ex.getCause());
+                                    message = I18n.i18n("launch.failed.download_library", ((LibraryDownloadException) ex).getLibrary().getName()) + "\n";
+                                    if (ex.getCause() instanceof ResponseCodeException) {
+                                        ResponseCodeException rce = (ResponseCodeException) ex.getCause();
+                                        int responseCode = rce.getResponseCode();
+                                        URL url = rce.getUrl();
+                                        if (responseCode == 404)
+                                            message += I18n.i18n("download.code.404", url);
+                                        else
+                                            message += I18n.i18n("download.failed", url, responseCode);
+                                    } else {
+                                        message += StringUtils.getStackTrace(ex.getCause());
+                                    }
+                                } else if (ex instanceof DownloadException) {
+                                    URL url = ((DownloadException) ex).getUrl();
+                                    if (ex.getCause() instanceof SocketTimeoutException) {
+                                        message = I18n.i18n("install.failed.downloading.timeout", url);
+                                    } else if (ex.getCause() instanceof ResponseCodeException) {
+                                        ResponseCodeException responseCodeException = (ResponseCodeException) ex.getCause();
+                                        if (I18n.hasKey("download.code." + responseCodeException.getResponseCode())) {
+                                            message = I18n.i18n("download.code." + responseCodeException.getResponseCode(), url);
+                                        } else {
+                                            message = I18n.i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
+                                        }
+                                    } else {
+                                        message = I18n.i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
+                                    }
+                                } else if (ex instanceof GameAssetIndexDownloadTask.GameAssetIndexMalformedException) {
+                                    message = I18n.i18n("assets.index.malformed");
+                                } else if (ex instanceof AuthlibInjectorDownloadException) {
+                                    message = I18n.i18n("account.failed.injector_download_failure");
+                                } else if (ex instanceof CharacterDeletedException) {
+                                    message = I18n.i18n("account.failed.character_deleted");
+                                } else if (ex instanceof ResponseCodeException) {
+                                    ResponseCodeException rce = (ResponseCodeException) ex;
+                                    int responseCode = rce.getResponseCode();
+                                    URL url = rce.getUrl();
+                                    if (responseCode == 404)
+                                        message = I18n.i18n("download.code.404", url);
+                                    else
+                                        message = I18n.i18n("download.failed", url, responseCode);
                                 } else {
                                     message = StringUtils.getStackTrace(ex);
                                 }
                                 Controllers.dialog(message,
-                                        scriptFile == null ? i18n("launch.failed") : i18n("version.launch_script.failed"),
-                                        MessageDialogPane.MessageType.ERROR);
+                                        scriptFile == null ? I18n.i18n("launch.failed") : I18n.i18n("version.launch_script.failed"),
+                                        MessageType.ERROR);
                             }
                         }
-                    });
-                }
-                launchingStepsPane.setExecutor(null);
+                    }
+                    launchingStepsPane.setExecutor(null);
+                });
             }
         });
 
         executor.start();
-    }
-
-    public void emitStatus(LoadingState state) {
-        if (state == LoadingState.DONE) {
-            launchingStepsPane.fireEvent(new DialogCloseEvent());
-        }
-
-        launchingStepsPane.setTitle(state.getLocalizedMessage());
-        launchingStepsPane.setSubtitle((state.ordinal() + 1) + " / " + LoadingState.values().length);
     }
 
     private void checkExit() {
@@ -419,37 +445,28 @@ public final class LauncherHelper {
         }
     }
 
-    private static class LaunchTask<T> extends TaskResult<T> {
-        private final ExceptionalSupplier<T, Exception> supplier;
-
-        public LaunchTask(ExceptionalSupplier<T, Exception> supplier) {
-            this.supplier = supplier;
-        }
-
-        @Override
-        public void execute() throws Exception {
-            setResult(supplier.get());
-        }
-    }
-
     /**
      * The managed process listener.
-     * Guarantee that one [JavaProcess], one [SLauncherProcessListener].
-     * Because every time we launched a game, we generates a new [SLauncherProcessListener]
+     * Guarantee that one [JavaProcess], one [SLProcessListener].
+     * Because every time we launched a game, we generates a new [SLProcessListener]
      */
-    class SLauncherProcessListener implements ProcessListener {
+    class SLProcessListener implements ProcessListener {
 
-        private final VersionSetting setting;
+        private final SLGameRepository repository;
+        private final String version;
         private final Map<String, String> forbiddenTokens;
         private final boolean detectWindow;
         private final LinkedList<Pair<String, Log4jLevel>> logs;
-        private final CountDownLatch latch = new CountDownLatch(1);
+        private final CountDownLatch logWindowLatch = new CountDownLatch(1);
+        private final CountDownLatch launchingLatch;
         private ManagedProcess process;
         private boolean lwjgl;
         private LogWindow logWindow;
 
-        public SLauncherProcessListener(AuthInfo authInfo, VersionSetting setting, boolean detectWindow) {
-            this.setting = setting;
+        public SLProcessListener(SLGameRepository repository, String version, AuthInfo authInfo, CountDownLatch launchingLatch, boolean detectWindow) {
+            this.repository = repository;
+            this.version = version;
+            this.launchingLatch = launchingLatch;
             this.detectWindow = detectWindow;
 
             if (authInfo == null)
@@ -468,11 +485,17 @@ public final class LauncherHelper {
         public void setProcess(ManagedProcess process) {
             this.process = process;
 
+            String command = new CommandBuilder().addAll(process.getCommands()).toString();
+            for (Map.Entry<String, String> entry : forbiddenTokens.entrySet())
+                command = command.replace(entry.getKey(), entry.getValue());
+
+            Logging.LOG.info("Launched process: " + command);
+
             if (showLogs)
                 Platform.runLater(() -> {
                     logWindow = new LogWindow();
                     logWindow.show();
-                    latch.countDown();
+                    logWindowLatch.countDown();
                 });
         }
 
@@ -484,7 +507,7 @@ public final class LauncherHelper {
                         // these codes will be executed.
                         if (Controllers.getStage() != null) {
                             Controllers.getStage().hide();
-                            emitStatus(LoadingState.DONE);
+                            launchingLatch.countDown();
                         }
                     });
                     break;
@@ -492,17 +515,17 @@ public final class LauncherHelper {
                     // Never come to here.
                     break;
                 case KEEP:
-                    Platform.runLater(() -> {
-                        emitStatus(LoadingState.DONE);
-                    });
+                    Platform.runLater(launchingLatch::countDown);
                     break;
                 case HIDE:
+                    launchingLatch.countDown();
                     Platform.runLater(() -> {
                         // If application was stopped and execution services did not finish termination,
                         // these codes will be executed.
                         if (Controllers.getStage() != null) {
                             Controllers.getStage().close();
-                            emitStatus(LoadingState.DONE);
+                            Controllers.shutdown();
+                            Schedulers.shutdown();
                         }
                     });
                     break;
@@ -514,29 +537,29 @@ public final class LauncherHelper {
             String newLog = log;
             for (Map.Entry<String, String> entry : forbiddenTokens.entrySet())
                 newLog = newLog.replace(entry.getKey(), entry.getValue());
+            String filteredLog = newLog;
 
             if (level.lessOrEqual(Log4jLevel.ERROR))
-                System.err.print(log);
+                System.err.println(filteredLog);
             else
-                System.out.print(log);
+                System.out.println(filteredLog);
 
-            logs.add(Pair.pair(log, level));
-            if (logs.size() > config().getLogLines())
+            logs.add(Pair.pair(filteredLog, level));
+            if (logs.size() > ConfigHolder.config().getLogLines())
                 logs.removeFirst();
 
             if (showLogs) {
                 try {
-                    latch.await();
-                    logWindow.waitForLoaded();
+                    logWindowLatch.await();
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     return;
                 }
 
-                Platform.runLater(() -> logWindow.logLine(log, level));
+                Platform.runLater(() -> logWindow.logLine(filteredLog, level));
             }
 
-            if (!lwjgl && (log.contains("LWJGL Version: ") || !detectWindow)) {
+            if (!lwjgl && (filteredLog.toLowerCase().contains("lwjgl version") || !detectWindow)) {
                 lwjgl = true;
                 finishLaunch();
             }
@@ -544,32 +567,37 @@ public final class LauncherHelper {
 
         @Override
         public void onExit(int exitCode, ExitType exitType) {
+            launchingLatch.countDown();
+
             if (exitType == ExitType.INTERRUPTED)
                 return;
 
             // Game crashed before opening the game window.
             if (!lwjgl) finishLaunch();
 
-            if (exitType != ExitType.NORMAL && logWindow == null)
+            if (exitType != ExitType.NORMAL) {
+                repository.markVersionLaunchedAbnormally(version);
                 Platform.runLater(() -> {
-                    logWindow = new LogWindow();
+                    if (logWindow == null) {
+                        logWindow = new LogWindow();
 
-                    switch (exitType) {
-                        case JVM_ERROR:
-                            logWindow.setTitle(i18n("launch.failed.cannot_create_jvm"));
-                            break;
-                        case APPLICATION_ERROR:
-                            logWindow.setTitle(i18n("launch.failed.exited_abnormally"));
-                            break;
-                    }
+                        switch (exitType) {
+                            case JVM_ERROR:
+                                logWindow.setTitle(I18n.i18n("launch.failed.cannot_create_jvm"));
+                                break;
+                            case APPLICATION_ERROR:
+                                logWindow.setTitle(I18n.i18n("launch.failed.exited_abnormally"));
+                                break;
+                        }
 
-                    logWindow.show();
-                    logWindow.onDone.register(() -> {
                         logWindow.logLine("Command: " + new CommandBuilder().addAll(process.getCommands()).toString(), Log4jLevel.INFO);
                         for (Map.Entry<String, Log4jLevel> entry : logs)
                             logWindow.logLine(entry.getKey(), entry.getValue());
-                    });
+                    }
+
+                    logWindow.showGameCrashReport();
                 });
+            }
 
             checkExit();
         }

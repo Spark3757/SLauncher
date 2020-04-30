@@ -1,31 +1,31 @@
 package ru.spark.slauncher.ui.versions;
 
-import com.jfoenix.controls.JFXTreeTableColumn;
-import com.jfoenix.controls.JFXTreeTableView;
-import com.jfoenix.controls.RecursiveTreeItem;
+import com.jfoenix.controls.JFXCheckBox;
+import com.jfoenix.controls.JFXListView;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
 import com.jfoenix.effects.JFXDepthManager;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.geometry.Insets;
-import javafx.scene.Node;
+import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import org.jetbrains.annotations.NotNull;
 import ru.spark.slauncher.mod.ModInfo;
+import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
-import ru.spark.slauncher.ui.ToolbarListPageSkin;
-import ru.spark.slauncher.ui.construct.JFXCheckBoxTreeTableCell;
+import ru.spark.slauncher.ui.construct.FloatListCell;
 import ru.spark.slauncher.ui.construct.SpinnerPane;
 import ru.spark.slauncher.ui.construct.TwoLineListItem;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.ToolbarListPageSkin.createToolbarButton;
 
 class ModListPageSkin extends SkinBase<ModListPage> {
 
@@ -33,10 +33,10 @@ class ModListPageSkin extends SkinBase<ModListPage> {
         super(skinnable);
 
         StackPane pane = new StackPane();
-        pane.getStyleClass().addAll("notice-pane", "white-background");
+        pane.getStyleClass().addAll("notice-pane");
 
         BorderPane root = new BorderPane();
-        JFXTreeTableView<ModInfoObject> tableView = new JFXTreeTableView<>();
+        JFXListView<ModInfoObject> listView = new JFXListView<>();
 
         {
             HBox toolbar = new HBox();
@@ -44,14 +44,17 @@ class ModListPageSkin extends SkinBase<ModListPage> {
             JFXDepthManager.setDepth(toolbar, 1);
             toolbar.setPickOnBounds(false);
 
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("button.refresh"), SVG::refresh, skinnable::refresh));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.add"), SVG::plus, skinnable::add));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.remove"), SVG::delete, () ->
-                    skinnable.removeSelected(tableView.getSelectionModel().getSelectedItems())));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.enable"), SVG::check, () ->
-                    skinnable.enableSelected(tableView.getSelectionModel().getSelectedItems())));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.disable"), SVG::close, () ->
-                    skinnable.disableSelected(tableView.getSelectionModel().getSelectedItems())));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("button.refresh"), SVG::refresh, skinnable::refresh));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("mods.add"), SVG::plus, skinnable::add));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("button.remove"), SVG::delete, () -> {
+                Controllers.confirm(I18n.i18n("button.remove.confirm"), I18n.i18n("button.remove"), () -> {
+                    skinnable.removeSelected(listView.getSelectionModel().getSelectedItems());
+                }, null);
+            }));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("mods.enable"), SVG::check, () ->
+                    skinnable.enableSelected(listView.getSelectionModel().getSelectedItems())));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("mods.disable"), SVG::close, () ->
+                    skinnable.disableSelected(listView.getSelectionModel().getSelectedItems())));
             root.setTop(toolbar);
         }
 
@@ -60,30 +63,46 @@ class ModListPageSkin extends SkinBase<ModListPage> {
             center.getStyleClass().add("large-spinner-pane");
             center.loadingProperty().bind(skinnable.loadingProperty());
 
-            tableView.getStyleClass().add("no-header");
-            tableView.setShowRoot(false);
-            tableView.setEditable(true);
-            tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-            tableView.setRoot(new RecursiveTreeItem<>(skinnable.getItems(), RecursiveTreeObject::getChildren));
+            listView.setCellFactory(x -> new FloatListCell<ModInfoObject>() {
+                JFXCheckBox checkBox = new JFXCheckBox();
+                TwoLineListItem content = new TwoLineListItem();
+                BooleanProperty booleanProperty;
 
-            JFXTreeTableColumn<ModInfoObject, Boolean> activeColumn = new JFXTreeTableColumn<>();
-            FXUtils.setupCellValueFactory(activeColumn, ModInfoObject::activeProperty);
-            activeColumn.setCellFactory(c -> new JFXCheckBoxTreeTableCell<>());
-            activeColumn.setEditable(true);
-            activeColumn.setMaxWidth(40);
-            activeColumn.setMinWidth(40);
+                {
 
-            JFXTreeTableColumn<ModInfoObject, Node> detailColumn = new JFXTreeTableColumn<>();
-            FXUtils.setupCellValueFactory(detailColumn, ModInfoObject::nodeProperty);
+                    Region clippedContainer = (Region) listView.lookup(".clipped-container");
+                    setPrefWidth(0);
+                    HBox container = new HBox(8);
+                    container.setAlignment(Pos.CENTER_LEFT);
+                    pane.getChildren().add(container);
+                    if (clippedContainer != null) {
+                        maxWidthProperty().bind(clippedContainer.widthProperty());
+                        prefWidthProperty().bind(clippedContainer.widthProperty());
+                        minWidthProperty().bind(clippedContainer.widthProperty());
+                    }
 
-            tableView.getColumns().setAll(activeColumn, detailColumn);
+                    container.getChildren().setAll(checkBox, content);
+                }
 
-            tableView.setColumnResizePolicy(JFXTreeTableView.CONSTRAINED_RESIZE_POLICY);
-            center.setContent(tableView);
+                @Override
+                protected void updateControl(ModInfoObject dataItem, boolean empty) {
+                    if (empty) return;
+                    content.setTitle(dataItem.getTitle());
+                    content.setSubtitle(dataItem.getSubtitle());
+                    if (booleanProperty != null) {
+                        checkBox.selectedProperty().unbindBidirectional(booleanProperty);
+                    }
+                    checkBox.selectedProperty().bindBidirectional(booleanProperty = dataItem.active);
+                }
+            });
+            listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            Bindings.bindContent(listView.getItems(), skinnable.getItems());
+
+            center.setContent(listView);
             root.setCenter(center);
         }
 
-        Label label = new Label(i18n("mods.not_modded"));
+        Label label = new Label(I18n.i18n("mods.not_modded"));
         label.prefWidthProperty().bind(pane.widthProperty().add(-100));
 
         FXUtils.onChangeAndOperate(skinnable.moddedProperty(), modded -> {
@@ -94,34 +113,39 @@ class ModListPageSkin extends SkinBase<ModListPage> {
         getChildren().setAll(pane);
     }
 
-    static class ModInfoObject extends RecursiveTreeObject<ModInfoObject> {
+    static class ModInfoObject extends RecursiveTreeObject<ModInfoObject> implements Comparable<ModInfoObject> {
         private final BooleanProperty active;
         private final ModInfo modInfo;
-        private final ObjectProperty<Node> node;
+        private final String message;
 
         ModInfoObject(ModInfo modInfo) {
             this.modInfo = modInfo;
             this.active = modInfo.activeProperty();
             StringBuilder message = new StringBuilder(modInfo.getName());
             if (StringUtils.isNotBlank(modInfo.getVersion()))
-                message.append(", ").append(i18n("archive.version")).append(": ").append(modInfo.getVersion());
+                message.append(", ").append(I18n.i18n("archive.version")).append(": ").append(modInfo.getVersion());
             if (StringUtils.isNotBlank(modInfo.getGameVersion()))
-                message.append(", ").append(i18n("archive.game_version")).append(": ").append(modInfo.getGameVersion());
+                message.append(", ").append(I18n.i18n("archive.game_version")).append(": ").append(modInfo.getGameVersion());
             if (StringUtils.isNotBlank(modInfo.getAuthors()))
-                message.append(", ").append(i18n("archive.author")).append(": ").append(modInfo.getAuthors());
-            this.node = new SimpleObjectProperty<>(FXUtils.wrapMargin(new TwoLineListItem(modInfo.getFileName(), message.toString()), new Insets(8, 0, 8, 0)));
+                message.append(", ").append(I18n.i18n("archive.author")).append(": ").append(modInfo.getAuthors());
+            this.message = message.toString();
         }
 
-        BooleanProperty activeProperty() {
-            return active;
+        String getTitle() {
+            return modInfo.getFileName();
         }
 
-        ObjectProperty<Node> nodeProperty() {
-            return node;
+        String getSubtitle() {
+            return message;
         }
 
         ModInfo getModInfo() {
             return modInfo;
+        }
+
+        @Override
+        public int compareTo(@NotNull ModListPageSkin.ModInfoObject o) {
+            return modInfo.getFileName().toLowerCase().compareTo(o.modInfo.getFileName().toLowerCase());
         }
     }
 }

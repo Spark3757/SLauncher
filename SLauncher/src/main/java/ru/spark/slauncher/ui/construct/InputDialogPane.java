@@ -2,50 +2,53 @@ package ru.spark.slauncher.ui.construct;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXTextField;
-import javafx.beans.binding.Bindings;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.util.FutureCallback;
 
+import java.util.concurrent.CompletableFuture;
+
 public class InputDialogPane extends StackPane {
+    private final CompletableFuture<String> future = new CompletableFuture<>();
 
     @FXML
     private JFXButton acceptButton;
     @FXML
     private JFXButton cancelButton;
     @FXML
-    private JFXTextField textField;
+    private Label title;
     @FXML
-    private Label content;
+    private VBox vbox;
     @FXML
     private Label lblCreationWarning;
     @FXML
     private SpinnerPane acceptPane;
 
-    public InputDialogPane(String text, FutureCallback<String> onResult) {
+    public InputDialogPane(String text, String initialValue, FutureCallback<String> onResult) {
         FXUtils.loadFXML(this, "/assets/fxml/input-dialog.fxml");
-        content.setText(text);
+        title.setText(text);
+        JFXTextField textField = new JFXTextField();
+        textField.setText(initialValue);
+        vbox.getChildren().setAll(textField);
         cancelButton.setOnMouseClicked(e -> fireEvent(new DialogCloseEvent()));
         acceptButton.setOnMouseClicked(e -> {
             acceptPane.showSpinner();
+
             onResult.call(textField.getText(), () -> {
                 acceptPane.hideSpinner();
+                future.complete(textField.getText());
                 fireEvent(new DialogCloseEvent());
             }, msg -> {
                 acceptPane.hideSpinner();
                 lblCreationWarning.setText(msg);
             });
         });
-
-        acceptButton.disableProperty().bind(Bindings.createBooleanBinding(
-                () -> !textField.validate(),
-                textField.textProperty()
-        ));
     }
 
-    public void setInitialText(String text) {
-        textField.setText(text);
+    public CompletableFuture<String> getCompletableFuture() {
+        return future;
     }
 }

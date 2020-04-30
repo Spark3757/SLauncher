@@ -1,6 +1,7 @@
 package ru.spark.slauncher.ui.versions;
 
 import com.jfoenix.controls.JFXCheckBox;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Node;
@@ -13,17 +14,20 @@ import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.*;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import java.util.stream.Stream;
 
 public class WorldListPage extends ListPageBase<WorldListItem> {
     private final BooleanProperty showAll = new SimpleBooleanProperty(this, "showAll", false);
@@ -48,39 +52,43 @@ public class WorldListPage extends ListPageBase<WorldListItem> {
     }
 
     @Override
-    protected ToolbarListPageSkin createDefaultSkin() {
+    protected ToolbarListPageSkin<WorldListPage> createDefaultSkin() {
         return new WorldListPageSkin();
     }
 
-    public void loadVersion(Profile profile, String id) {
+    public CompletableFuture<?> loadVersion(Profile profile, String id) {
         this.profile = profile;
         this.id = id;
         this.savesDir = profile.getRepository().getRunDirectory(id).toPath().resolve("saves");
-        refresh();
+        return refresh();
     }
 
-    public void refresh() {
+    public CompletableFuture<?> refresh() {
         if (profile == null || id == null)
-            return;
+            return CompletableFuture.completedFuture(null);
 
         setLoading(true);
-        Task
-                .of(() -> gameVersion = GameVersion.minecraftVersion(profile.getRepository().getVersionJar(id)).orElse(null))
-                .thenSupply(() -> World.getWorlds(savesDir).parallel().collect(Collectors.toList()))
-                .whenComplete(Schedulers.javafx(), (result, isDependentSucceeded, exception) -> {
+        return CompletableFuture
+                .runAsync(() -> gameVersion = GameVersion.minecraftVersion(profile.getRepository().getVersionJar(id)).orElse(null))
+                .thenApplyAsync(unused -> {
+                    try (Stream<World> stream = World.getWorlds(savesDir)) {
+                        return stream.parallel().collect(Collectors.toList());
+                    }
+                })
+                .whenCompleteAsync((result, exception) -> {
                     worlds = result;
                     setLoading(false);
-                    if (isDependentSucceeded)
+                    if (exception == null)
                         itemsProperty().setAll(result.stream()
                                 .filter(world -> isShowAll() || world.getGameVersion() == null || world.getGameVersion().equals(gameVersion))
                                 .map(WorldListItem::new).collect(Collectors.toList()));
-                }).start();
+                }, Platform::runLater);
     }
 
     public void add() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle(i18n("world.import.choose"));
-        chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter(i18n("world.extension"), "*.zip"));
+        chooser.setTitle(I18n.i18n("world.import.choose"));
+        chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter(I18n.i18n("world.extension"), "*.zip"));
         List<File> res = chooser.showOpenMultipleDialog(Controllers.getStage());
 
         if (res == null || res.isEmpty()) return;
@@ -90,23 +98,25 @@ public class WorldListPage extends ListPageBase<WorldListItem> {
     private void installWorld(File zipFile) {
         // Only accept one world file because user is required to confirm the new world name
         // Or too many input dialogs are popped.
-        Task.ofResult(() -> new World(zipFile.toPath()))
+        Task.supplyAsync(() -> new World(zipFile.toPath()))
                 .whenComplete(Schedulers.javafx(), world -> {
-                    Controllers.inputDialog(i18n("world.name.enter"), (name, resolve, reject) -> {
-                        Task.of(() -> world.install(savesDir, name))
+                    Controllers.prompt(I18n.i18n("world.name.enter"), (name, resolve, reject) -> {
+                        Task.runAsync(() -> world.install(savesDir, name))
                                 .whenComplete(Schedulers.javafx(), () -> {
                                     itemsProperty().add(new WorldListItem(new World(savesDir.resolve(name))));
                                     resolve.run();
                                 }, e -> {
                                     if (e instanceof FileAlreadyExistsException)
-                                        reject.accept(i18n("world.import.failed", i18n("world.import.already_exists")));
+                                        reject.accept(I18n.i18n("world.import.failed", I18n.i18n("world.import.already_exists")));
+                                    else if (e instanceof IOException && e.getCause() instanceof InvalidPathException)
+                                        reject.accept(I18n.i18n("world.import.failed", I18n.i18n("install.new_game.malformed")));
                                     else
-                                        reject.accept(i18n("world.import.failed", e.getClass().getName() + ": " + e.getLocalizedMessage()));
+                                        reject.accept(I18n.i18n("world.import.failed", e.getClass().getName() + ": " + e.getLocalizedMessage()));
                                 }).start();
-                    }).setInitialText(world.getWorldName());
+                    }, world.getWorldName());
                 }, e -> {
                     Logging.LOG.log(Level.WARNING, "Unable to parse world file " + zipFile, e);
-                    Controllers.dialog(i18n("world.import.invalid"));
+                    Controllers.dialog(I18n.i18n("world.import.invalid"));
                 }).start();
     }
 
@@ -114,12 +124,12 @@ public class WorldListPage extends ListPageBase<WorldListItem> {
         return showAll.get();
     }
 
-    public void setShowAll(boolean showAll) {
-        this.showAll.set(showAll);
-    }
-
     public BooleanProperty showAllProperty() {
         return showAll;
+    }
+
+    public void setShowAll(boolean showAll) {
+        this.showAll.set(showAll);
     }
 
     private class WorldListPageSkin extends ToolbarListPageSkin<WorldListPage> {
@@ -133,12 +143,12 @@ public class WorldListPage extends ListPageBase<WorldListItem> {
             JFXCheckBox chkShowAll = new JFXCheckBox();
             chkShowAll.getStyleClass().add("jfx-tool-bar-checkbox");
             chkShowAll.textFillProperty().bind(Theme.foregroundFillBinding());
-            chkShowAll.setText(i18n("world.show_all"));
+            chkShowAll.setText(I18n.i18n("world.show_all"));
             chkShowAll.selectedProperty().bindBidirectional(skinnable.showAllProperty());
 
             return Arrays.asList(chkShowAll,
-                    createToolbarButton(i18n("button.refresh"), SVG::refresh, skinnable::refresh),
-                    createToolbarButton(i18n("world.add"), SVG::plus, skinnable::add));
+                    createToolbarButton(I18n.i18n("button.refresh"), SVG::refresh, skinnable::refresh),
+                    createToolbarButton(I18n.i18n("world.add"), SVG::plus, skinnable::add));
         }
     }
 }

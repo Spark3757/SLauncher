@@ -13,10 +13,11 @@ import java.util.Objects;
 import java.util.logging.Level;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ModInfo implements Comparable<ModInfo> {
 
+    private Path file;
     private final String name;
     private final String description;
     private final String authors;
@@ -25,7 +26,6 @@ public final class ModInfo implements Comparable<ModInfo> {
     private final String url;
     private final String fileName;
     private final BooleanProperty activeProperty;
-    private Path file;
 
     public ModInfo(ModManager modManager, File file, String name, String description) {
         this(modManager, file, name, description, "", "", "", "");

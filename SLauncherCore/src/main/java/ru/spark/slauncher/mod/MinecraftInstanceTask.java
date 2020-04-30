@@ -1,6 +1,8 @@
 package ru.spark.slauncher.mod;
 
 import ru.spark.slauncher.task.Task;
+import ru.spark.slauncher.util.DigestUtils;
+import ru.spark.slauncher.util.Hex;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.CompressingUtils;
 import ru.spark.slauncher.util.io.FileUtils;
@@ -13,10 +15,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.LinkedList;
 import java.util.List;
 
-import static ru.spark.slauncher.util.DigestUtils.digest;
-import static ru.spark.slauncher.util.Hex.encodeHex;
-
-public final class MinecraftInstanceTask<T> extends Task {
+public final class MinecraftInstanceTask<T> extends Task<Void> {
 
     private final File zipFile;
     private final Charset encoding;
@@ -32,9 +31,6 @@ public final class MinecraftInstanceTask<T> extends Task {
         this.manifest = manifest;
         this.jsonFile = jsonFile;
         this.type = type;
-
-        if (!zipFile.exists())
-            throw new IllegalArgumentException("File " + zipFile + " does not exist. Cannot parse this modpack.");
     }
 
     @Override
@@ -45,11 +41,11 @@ public final class MinecraftInstanceTask<T> extends Task {
             Path root = fs.getPath(subDirectory);
 
             if (Files.exists(root))
-                Files.walkFileTree(fs.getPath(subDirectory), new SimpleFileVisitor<Path>() {
+                Files.walkFileTree(root, new SimpleFileVisitor<Path>() {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        String relativePath = root.relativize(file).normalize().toString();
-                        overrides.add(new ModpackConfiguration.FileInformation(relativePath, encodeHex(digest("SHA-1", file))));
+                        String relativePath = root.relativize(file).normalize().toString().replace(File.separatorChar, '/');
+                        overrides.add(new ModpackConfiguration.FileInformation(relativePath, Hex.encodeHex(DigestUtils.digest("SHA-1", file))));
                         return FileVisitResult.CONTINUE;
                     }
                 });

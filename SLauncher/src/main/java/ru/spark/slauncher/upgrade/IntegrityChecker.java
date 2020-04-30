@@ -1,6 +1,9 @@
 package ru.spark.slauncher.upgrade;
 
+import ru.spark.slauncher.util.DigestUtils;
+import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.io.IOUtils;
+import ru.spark.slauncher.util.io.JarUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,14 +11,22 @@ import java.nio.file.Path;
 import java.security.GeneralSecurityException;
 import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.Signature;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * A class that checks the integrity of SLauncher.
  *
- * @author Spark1337
+ * @author spark1337
  */
-@Deprecated
 public final class IntegrityChecker {
     private static final String SIGNATURE_FILE = "META-INF/slauncher_signature";
     private static final String PUBLIC_KEY_FILE = "assets/slauncher_signature_publickey.der";
@@ -36,7 +47,42 @@ public final class IntegrityChecker {
     }
 
     private static boolean verifyJar(Path jarPath) throws IOException {
-        return true;
+        PublicKey publickey = getPublicKey();
+
+        byte[] signature = null;
+        Map<String, byte[]> fileFingerprints = new TreeMap<>();
+        try (ZipFile zip = new ZipFile(jarPath.toFile())) {
+            for (ZipEntry entry : zip.stream().toArray(ZipEntry[]::new)) {
+                String filename = entry.getName();
+                try (InputStream in = zip.getInputStream(entry)) {
+                    if (in == null) {
+                        throw new IOException("entry is null");
+                    }
+
+                    if (SIGNATURE_FILE.equals(filename)) {
+                        signature = IOUtils.readFullyAsByteArray(in);
+                    } else {
+                        fileFingerprints.put(filename, DigestUtils.digest("SHA-512", in));
+                    }
+                }
+            }
+        }
+
+        if (signature == null) {
+            throw new IOException("Signature is missing");
+        }
+
+        try {
+            Signature verifier = Signature.getInstance("SHA512withRSA");
+            verifier.initVerify(publickey);
+            for (Entry<String, byte[]> entry : fileFingerprints.entrySet()) {
+                verifier.update(DigestUtils.digest("SHA-512", entry.getKey().getBytes(UTF_8)));
+                verifier.update(entry.getValue());
+            }
+            return verifier.verify(signature);
+        } catch (GeneralSecurityException e) {
+            throw new IOException("Failed to verify signature", e);
+        }
     }
 
     static void requireVerifiedJar(Path jar) throws IOException {
@@ -50,6 +96,22 @@ public final class IntegrityChecker {
      * This method is blocking.
      */
     public static synchronized boolean isSelfVerified() {
-        return true;
+        if (selfVerified != null) {
+            return selfVerified;
+        }
+        try {
+            verifySelf();
+            Logging.LOG.info("Successfully verified current JAR");
+            selfVerified = true;
+        } catch (IOException e) {
+            Logging.LOG.log(Level.WARNING, "Failed to verify myself, is the JAR corrupt?", e);
+            selfVerified = false;
+        }
+        return selfVerified;
+    }
+
+    private static void verifySelf() throws IOException {
+        Path self = JarUtils.thisJar().orElseThrow(() -> new IOException("Failed to find current SLauncher location"));
+        requireVerifiedJar(self);
     }
 }

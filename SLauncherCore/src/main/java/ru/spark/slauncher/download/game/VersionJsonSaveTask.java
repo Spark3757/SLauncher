@@ -2,7 +2,7 @@ package ru.spark.slauncher.download.game;
 
 import ru.spark.slauncher.game.DefaultGameRepository;
 import ru.spark.slauncher.game.Version;
-import ru.spark.slauncher.task.TaskResult;
+import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.FileUtils;
 
@@ -11,9 +11,9 @@ import java.io.File;
 /**
  * This task is to save the version json.
  *
- * @author Spark1337
+ * @author spark1337
  */
-public final class VersionJsonSaveTask extends TaskResult<Version> {
+public final class VersionJsonSaveTask extends Task<Version> {
 
     private final DefaultGameRepository repository;
     private final Version version;

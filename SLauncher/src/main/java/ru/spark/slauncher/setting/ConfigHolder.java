@@ -2,6 +2,7 @@ package ru.spark.slauncher.setting;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonParseException;
+import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.util.InvocationDispatcher;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
@@ -19,8 +20,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class ConfigHolder {
 
-    public static final String CONFIG_FILENAME = OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/slauncher.json";
-    public static final String CONFIG_FILENAME_LINUX = OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/slauncher.json";
+    public static final String CONFIG_FILENAME = Metadata.SL_DIRECTORY.toAbsolutePath() + "/slauncher.json";
+    public static final String CONFIG_FILENAME_LINUX = Metadata.SL_DIRECTORY.toAbsolutePath() + "/.slauncher.json";
     private static Path configLocation;
     private static Config configInstance;
     private static boolean newlyCreated;
@@ -40,6 +41,10 @@ public final class ConfigHolder {
             throw new IllegalStateException("Configuration hasn't been loaded");
         }
         return configInstance;
+    }
+
+    public static boolean isNewlyCreated() {
+        return newlyCreated;
     }
 
     public synchronized static void init() throws IOException {

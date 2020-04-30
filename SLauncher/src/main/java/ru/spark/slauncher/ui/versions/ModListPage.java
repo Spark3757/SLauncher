@@ -1,11 +1,10 @@
 package ru.spark.slauncher.ui.versions;
 
-import com.jfoenix.controls.JFXTabPane;
+import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.control.Skin;
-import javafx.scene.control.TreeItem;
 import javafx.stage.FileChooser;
 import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.mod.ModInfo;
@@ -16,28 +15,33 @@ import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.ListPageBase;
+import ru.spark.slauncher.ui.construct.TabHeader;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.runInFX;
 
 public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObject> {
     private final BooleanProperty modded = new SimpleBooleanProperty(this, "modded", false);
 
-    private JFXTabPane parentTab;
+    private TabHeader.Tab tab;
     private ModManager modManager;
     private LibraryAnalyzer libraryAnalyzer;
 
-    public ModListPage() {
+    public ModListPage(TabHeader.Tab tab) {
+        this.tab = tab;
 
         FXUtils.applyDragListener(this, it -> Arrays.asList("jar", "zip", "litemod").contains(FileUtils.getExtension(it)), mods -> {
             mods.forEach(it -> {
@@ -60,41 +64,47 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
         loadMods(modManager);
     }
 
-    public void loadVersion(Profile profile, String id) {
-        libraryAnalyzer = LibraryAnalyzer.analyze(profile.getRepository().getResolvedVersion(id));
+    public CompletableFuture<?> loadVersion(Profile profile, String id) {
+        libraryAnalyzer = LibraryAnalyzer.analyze(profile.getRepository().getResolvedPreservingPatchesVersion(id));
         modded.set(libraryAnalyzer.hasModLoader());
-        loadMods(profile.getRepository().getModManager(id));
+        return loadMods(profile.getRepository().getModManager(id));
     }
 
-    private void loadMods(ModManager modManager) {
+    private CompletableFuture<?> loadMods(ModManager modManager) {
         this.modManager = modManager;
-        Task.ofResult(() -> {
-            synchronized (ModListPage.this) {
-                FXUtils.runInFX(() -> loadingProperty().set(true));
-                modManager.refreshMods();
-                return new LinkedList<>(modManager.getMods());
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                synchronized (ModListPage.this) {
+                    runInFX(() -> loadingProperty().set(true));
+                    modManager.refreshMods();
+                    return new LinkedList<>(modManager.getMods());
+                }
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
             }
-        }).whenComplete(Schedulers.javafx(), (list, isDependentSucceeded, exception) -> {
+        }).whenCompleteAsync((list, exception) -> {
             loadingProperty().set(false);
-            if (isDependentSucceeded)
-                FXUtils.onWeakChangeAndOperate(parentTab.getSelectionModel().selectedItemProperty(), newValue -> {
-                    if (newValue != null && newValue.getUserData() == ModListPage.this)
-                        itemsProperty().setAll(list.stream().map(ModListPageSkin.ModInfoObject::new).collect(Collectors.toList()));
-                });
-        }).start();
+            if (exception == null)
+                getProperties().put(ModListPage.class, FXUtils.onWeakChangeAndOperate(tab.selectedProperty(), newValue -> {
+                    if (newValue)
+                        itemsProperty().setAll(list.stream().map(ModListPageSkin.ModInfoObject::new).sorted().collect(Collectors.toList()));
+                }));
+            else
+                getProperties().remove(ModListPage.class);
+        }, Platform::runLater);
     }
 
     public void add() {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle(i18n("mods.choose_mod"));
-        chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter(i18n("extension.mod"), "*.jar", "*.zip", "*.litemod"));
+        chooser.setTitle(I18n.i18n("mods.choose_mod"));
+        chooser.getExtensionFilters().setAll(new FileChooser.ExtensionFilter(I18n.i18n("extension.mod"), "*.jar", "*.zip", "*.litemod"));
         List<File> res = chooser.showOpenMultipleDialog(Controllers.getStage());
 
         // It's guaranteed that succeeded and failed are thread safe here.
         List<String> succeeded = new LinkedList<>();
         List<String> failed = new LinkedList<>();
         if (res == null) return;
-        Task.of(() -> {
+        Task.runAsync(() -> {
             for (File file : res) {
                 try {
                     modManager.addMod(file);
@@ -106,25 +116,20 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
                     // Actually addMod will not throw exceptions because FileChooser has already filtered files.
                 }
             }
-        }).with(Task.of(Schedulers.javafx(), () -> {
+        }).withRunAsync(Schedulers.javafx(), () -> {
             List<String> prompt = new LinkedList<>();
             if (!succeeded.isEmpty())
-                prompt.add(i18n("mods.add.success", String.join(", ", succeeded)));
+                prompt.add(I18n.i18n("mods.add.success", String.join(", ", succeeded)));
             if (!failed.isEmpty())
-                prompt.add(i18n("mods.add.failed", String.join(", ", failed)));
-            Controllers.dialog(String.join("\n", prompt), i18n("mods.add"));
+                prompt.add(I18n.i18n("mods.add.failed", String.join(", ", failed)));
+            Controllers.dialog(String.join("\n", prompt), I18n.i18n("mods.add"));
             loadMods(modManager);
-        })).start();
+        }).start();
     }
 
-    public void setParentTab(JFXTabPane parentTab) {
-        this.parentTab = parentTab;
-    }
-
-    public void removeSelected(ObservableList<TreeItem<ModListPageSkin.ModInfoObject>> selectedItems) {
+    public void removeSelected(ObservableList<ModListPageSkin.ModInfoObject> selectedItems) {
         try {
             modManager.removeMods(selectedItems.stream()
-                    .map(TreeItem::getValue)
                     .filter(Objects::nonNull)
                     .map(ModListPageSkin.ModInfoObject::getModInfo)
                     .toArray(ModInfo[]::new));
@@ -134,16 +139,16 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
         }
     }
 
-    public void enableSelected(ObservableList<TreeItem<ModListPageSkin.ModInfoObject>> selectedItems) {
+    public void enableSelected(ObservableList<ModListPageSkin.ModInfoObject> selectedItems) {
         selectedItems.stream()
-                .map(TreeItem::getValue)
+                .filter(Objects::nonNull)
                 .map(ModListPageSkin.ModInfoObject::getModInfo)
                 .forEach(info -> info.setActive(true));
     }
 
-    public void disableSelected(ObservableList<TreeItem<ModListPageSkin.ModInfoObject>> selectedItems) {
+    public void disableSelected(ObservableList<ModListPageSkin.ModInfoObject> selectedItems) {
         selectedItems.stream()
-                .map(TreeItem::getValue)
+                .filter(Objects::nonNull)
                 .map(ModListPageSkin.ModInfoObject::getModInfo)
                 .forEach(info -> info.setActive(false));
     }
@@ -152,11 +157,11 @@ public final class ModListPage extends ListPageBase<ModListPageSkin.ModInfoObjec
         return modded.get();
     }
 
-    public void setModded(boolean modded) {
-        this.modded.set(modded);
-    }
-
     public BooleanProperty moddedProperty() {
         return modded;
+    }
+
+    public void setModded(boolean modded) {
+        this.modded.set(modded);
     }
 }

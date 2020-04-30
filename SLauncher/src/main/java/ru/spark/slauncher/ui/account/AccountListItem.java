@@ -20,11 +20,10 @@ import ru.spark.slauncher.setting.Accounts;
 import ru.spark.slauncher.ui.DialogController;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AccountListItem extends RadioButton {
 
@@ -42,7 +41,7 @@ public class AccountListItem extends RadioButton {
         if (account instanceof AuthlibInjectorAccount) {
             AuthlibInjectorServer server = ((AuthlibInjectorAccount) account).getServer();
             subtitle.bind(Bindings.concat(
-                    loginTypeName, ", ", i18n("account.injector.server"), ": ",
+                    loginTypeName, ", ", I18n.i18n("account.injector.server"), ": ",
                     Bindings.createStringBinding(server::getName, server)));
         } else {
             subtitle.set(loginTypeName);

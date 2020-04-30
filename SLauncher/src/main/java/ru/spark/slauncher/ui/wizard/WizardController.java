@@ -2,14 +2,15 @@ package ru.spark.slauncher.ui.wizard;
 
 import javafx.scene.Node;
 import ru.spark.slauncher.task.Task;
+import ru.spark.slauncher.util.Logging;
 
 import java.util.*;
 
 public class WizardController implements Navigation {
     private final WizardDisplayer displayer;
+    private WizardProvider provider = null;
     private final Map<String, Object> settings = new HashMap<>();
     private final Stack<Node> pages = new Stack<>();
-    private WizardProvider provider = null;
 
     public WizardController(WizardDisplayer displayer) {
         this.displayer = displayer;
@@ -46,6 +47,8 @@ public class WizardController implements Navigation {
             ((WizardPage) page).onNavigate(settings);
 
         displayer.onStart();
+
+        Logging.LOG.info("Navigating to " + page + ", pages: " + pages);
         displayer.navigateTo(page, NavigationDirection.START);
     }
 
@@ -60,6 +63,7 @@ public class WizardController implements Navigation {
         if (page instanceof WizardPage)
             ((WizardPage) page).onNavigate(settings);
 
+        Logging.LOG.info("Navigating to " + page + ", pages: " + pages);
         displayer.navigateTo(page, NavigationDirection.NEXT);
     }
 
@@ -82,6 +86,7 @@ public class WizardController implements Navigation {
         if (prevPage instanceof WizardPage)
             ((WizardPage) prevPage).onNavigate(settings);
 
+        Logging.LOG.info("Navigating to " + prevPage + ", pages: " + pages);
         displayer.navigateTo(prevPage, NavigationDirection.PREVIOUS);
     }
 
@@ -95,7 +100,7 @@ public class WizardController implements Navigation {
         Object result = provider.finish(settings);
         if (result instanceof Summary)
             displayer.navigateTo(((Summary) result).getComponent(), NavigationDirection.NEXT);
-        else if (result instanceof Task) displayer.handleTask(settings, ((Task) result));
+        else if (result instanceof Task<?>) displayer.handleTask(settings, ((Task<?>) result));
         else if (result != null) throw new IllegalStateException("Unrecognized wizard result: " + result);
     }
 

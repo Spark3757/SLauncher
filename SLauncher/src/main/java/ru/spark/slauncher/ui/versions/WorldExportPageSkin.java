@@ -14,11 +14,10 @@ import javafx.scene.layout.VBox;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.ComponentList;
 import ru.spark.slauncher.ui.construct.FileItem;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class WorldExportPageSkin extends SkinBase<WorldExportPage> {
 
@@ -33,7 +32,7 @@ public class WorldExportPageSkin extends SkinBase<WorldExportPage> {
         {
             HBox labelContainer = new HBox();
             labelContainer.setPadding(new Insets(0, 0, 0, 5));
-            Label label = new Label(i18n("world.export"));
+            Label label = new Label(I18n.i18n("world.export"));
             labelContainer.getChildren().setAll(label);
             container.getChildren().add(labelContainer);
         }
@@ -41,18 +40,18 @@ public class WorldExportPageSkin extends SkinBase<WorldExportPage> {
         ComponentList list = new ComponentList();
 
         FileItem fileItem = new FileItem();
-        fileItem.setName(i18n("world.export.location"));
+        fileItem.setName(I18n.i18n("world.export.location"));
         fileItem.pathProperty().bindBidirectional(skinnable.pathProperty());
         list.getContent().add(fileItem);
 
         JFXTextField txtWorldName = new JFXTextField();
         txtWorldName.textProperty().bindBidirectional(skinnable.worldNameProperty());
         txtWorldName.setLabelFloat(true);
-        txtWorldName.setPromptText(i18n("world.name"));
+        txtWorldName.setPromptText(I18n.i18n("world.name"));
         StackPane.setMargin(txtWorldName, insets);
         list.getContent().add(txtWorldName);
 
-        Label lblGameVersionTitle = new Label(i18n("world.game_version"));
+        Label lblGameVersionTitle = new Label(I18n.i18n("world.game_version"));
         Label lblGameVersion = new Label();
         lblGameVersion.textProperty().bind(skinnable.gameVersionProperty());
         BorderPane gameVersionPane = new BorderPane();
@@ -63,7 +62,7 @@ public class WorldExportPageSkin extends SkinBase<WorldExportPage> {
 
         container.getChildren().add(list);
 
-        JFXButton btnExport = new JFXButton(i18n("button.export"));
+        JFXButton btnExport = new JFXButton(I18n.i18n("button.export"));
         btnExport.disableProperty().bind(Bindings.createBooleanBinding(() -> txtWorldName.getText().isEmpty() || Files.exists(Paths.get(fileItem.getPath())),
                 txtWorldName.textProperty().isEmpty(), fileItem.pathProperty()));
         btnExport.setButtonType(JFXButton.ButtonType.RAISED);

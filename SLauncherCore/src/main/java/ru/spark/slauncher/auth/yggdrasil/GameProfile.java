@@ -11,7 +11,7 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public class GameProfile implements Validation {

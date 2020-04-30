@@ -7,14 +7,14 @@ import java.util.*;
 /**
  * The builder which provide a task to build Minecraft environment.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class GameBuilder {
 
-    protected final Map<String, String> toolVersions = new HashMap<>();
-    protected final Set<RemoteVersion> remoteVersions = new HashSet<>();
     protected String name = "";
     protected String gameVersion = "";
+    protected final Map<String, String> toolVersions = new HashMap<>();
+    protected final Set<RemoteVersion> remoteVersions = new HashSet<>();
 
     public String getName() {
         return name;
@@ -55,5 +55,5 @@ public abstract class GameBuilder {
     /**
      * @return the task that can build thw whole Minecraft environment
      */
-    public abstract Task buildAsync();
+    public abstract Task<?> buildAsync();
 }

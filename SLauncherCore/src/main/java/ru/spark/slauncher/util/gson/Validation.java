@@ -5,7 +5,7 @@ import com.google.gson.JsonParseException;
 /**
  * Check if the json object's fields automatically filled by Gson are in right format.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public interface Validation {
 

@@ -29,20 +29,20 @@ public final class ModpackConfiguration<T> implements Validation {
         return manifest;
     }
 
-    public ModpackConfiguration<T> setManifest(T manifest) {
-        return new ModpackConfiguration<>(manifest, type, overrides);
-    }
-
     public String getType() {
         return type;
     }
 
-    public List<FileInformation> getOverrides() {
-        return Collections.unmodifiableList(overrides);
+    public ModpackConfiguration<T> setManifest(T manifest) {
+        return new ModpackConfiguration<>(manifest, type, overrides);
     }
 
     public ModpackConfiguration<T> setOverrides(List<FileInformation> overrides) {
         return new ModpackConfiguration<>(manifest, type, overrides);
+    }
+
+    public List<FileInformation> getOverrides() {
+        return Collections.unmodifiableList(overrides);
     }
 
     @Override

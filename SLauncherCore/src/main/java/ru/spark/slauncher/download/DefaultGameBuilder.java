@@ -1,69 +1,54 @@
 package ru.spark.slauncher.download;
 
-import ru.spark.slauncher.download.game.*;
 import ru.spark.slauncher.game.Version;
-import ru.spark.slauncher.task.ParallelTask;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.task.TaskResult;
 import ru.spark.slauncher.util.function.ExceptionalFunction;
-import ru.spark.slauncher.util.gson.JsonUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class DefaultGameBuilder extends GameBuilder {
 
     private final DefaultDependencyManager dependencyManager;
-    private final DownloadProvider downloadProvider;
 
     public DefaultGameBuilder(DefaultDependencyManager dependencyManager) {
         this.dependencyManager = dependencyManager;
-        this.downloadProvider = dependencyManager.getDownloadProvider();
     }
 
     public DefaultDependencyManager getDependencyManager() {
         return dependencyManager;
     }
 
-    public DownloadProvider getDownloadProvider() {
-        return downloadProvider;
-    }
-
     @Override
-    public Task buildAsync() {
-        return new VersionJsonDownloadTask(gameVersion, dependencyManager).thenCompose(rawJson -> {
-            Version original = JsonUtils.GSON.fromJson(rawJson, Version.class);
-            Version version = original.setId(name).setJar(null);
-            Task vanillaTask = downloadGameAsync(gameVersion, version).then(new ParallelTask(
-                    new GameAssetDownloadTask(dependencyManager, version, GameAssetDownloadTask.DOWNLOAD_INDEX_FORCIBLY),
-                    new GameLibrariesTask(dependencyManager, version) // Game libraries will be downloaded for multiple times partly, this time is for vanilla libraries.
-            ).with(new VersionJsonSaveTask(dependencyManager.getGameRepository(), version))); // using [with] because download failure here are tolerant.
+    public Task<?> buildAsync() {
+        List<String> stages = new ArrayList<>();
 
-            TaskResult<Version> libraryTask = vanillaTask.thenSupply(() -> version);
+        Task<Version> libraryTask = Task.supplyAsync(() -> new Version(name));
+        libraryTask = libraryTask.thenComposeAsync(libraryTaskHelper(gameVersion, "game", gameVersion));
+        stages.add("slauncher.install.game:" + gameVersion);
+        stages.add("slauncher.install.assets");
 
-            if (toolVersions.containsKey("forge"))
-                libraryTask = libraryTask.thenCompose(libraryTaskHelper(gameVersion, "forge"));
-            if (toolVersions.containsKey("liteloader"))
-                libraryTask = libraryTask.thenCompose(libraryTaskHelper(gameVersion, "liteloader"));
-            if (toolVersions.containsKey("optifine"))
-                libraryTask = libraryTask.thenCompose(libraryTaskHelper(gameVersion, "optifine"));
+        for (Map.Entry<String, String> entry : toolVersions.entrySet()) {
+            libraryTask = libraryTask.thenComposeAsync(libraryTaskHelper(gameVersion, entry.getKey(), entry.getValue()));
+            stages.add(String.format("slauncher.install.%s:%s", entry.getKey(), entry.getValue()));
+        }
 
-            for (RemoteVersion remoteVersion : remoteVersions)
-                libraryTask = libraryTask.thenCompose(dependencyManager.installLibraryAsync(remoteVersion));
+        for (RemoteVersion remoteVersion : remoteVersions) {
+            libraryTask = libraryTask.thenComposeAsync(version -> dependencyManager.installLibraryAsync(version, remoteVersion));
+            stages.add(String.format("slauncher.install.%s:%s", remoteVersion.getLibraryId(), remoteVersion.getSelfVersion()));
+        }
 
-            return libraryTask;
-        }).whenComplete((isDependentSucceeded, exception) -> {
-            if (!isDependentSucceeded)
+        return libraryTask.thenComposeAsync(dependencyManager.getGameRepository()::saveAsync).whenComplete(exception -> {
+            if (exception != null)
                 dependencyManager.getGameRepository().removeVersionFromDisk(name);
-        });
+        }).withStagesHint(stages);
     }
 
-    private ExceptionalFunction<Version, TaskResult<Version>, ?> libraryTaskHelper(String gameVersion, String libraryId) {
-        return version -> dependencyManager.installLibraryAsync(gameVersion, version, libraryId, toolVersions.get(libraryId));
+    private ExceptionalFunction<Version, Task<Version>, ?> libraryTaskHelper(String gameVersion, String libraryId, String libraryVersion) {
+        return version -> dependencyManager.installLibraryAsync(gameVersion, version, libraryId, libraryVersion);
     }
-
-    protected Task downloadGameAsync(String gameVersion, Version version) {
-        return new GameDownloadTask(dependencyManager, gameVersion, version);
-    }
-
 }

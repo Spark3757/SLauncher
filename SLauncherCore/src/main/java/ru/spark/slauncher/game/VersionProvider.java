@@ -3,7 +3,7 @@ package ru.spark.slauncher.game;
 /**
  * Supports version accessing.
  *
- * @author Spark1337
+ * @author spark1337
  * @see Version#resolve
  */
 public interface VersionProvider {

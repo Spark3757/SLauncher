@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(Argument.Deserializer.class)
 @Immutable

@@ -1,11 +1,11 @@
 package ru.spark.slauncher.auth.authlibinjector;
 
+import ru.spark.slauncher.util.Logging;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Level;
-
-import static ru.spark.slauncher.util.Logging.LOG;
 
 public class SimpleAuthlibInjectorArtifactProvider implements AuthlibInjectorArtifactProvider {
 
@@ -25,7 +25,7 @@ public class SimpleAuthlibInjectorArtifactProvider implements AuthlibInjectorArt
         try {
             return Optional.of(getArtifactInfo());
         } catch (IOException e) {
-            LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
+            Logging.LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
             return Optional.empty();
         }
     }

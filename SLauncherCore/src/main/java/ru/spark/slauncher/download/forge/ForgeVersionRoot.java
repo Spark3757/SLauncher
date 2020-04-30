@@ -7,7 +7,7 @@ import ru.spark.slauncher.util.gson.Validation;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class ForgeVersionRoot implements Validation {

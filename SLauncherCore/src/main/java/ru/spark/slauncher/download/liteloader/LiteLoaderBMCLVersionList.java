@@ -3,7 +3,7 @@ package ru.spark.slauncher.download.liteloader;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
-import ru.spark.slauncher.download.DownloadProvider;
+import ru.spark.slauncher.download.BMCLAPIDownloadProvider;
 import ru.spark.slauncher.download.VersionList;
 import ru.spark.slauncher.task.GetTask;
 import ru.spark.slauncher.task.Task;
@@ -18,25 +18,13 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class LiteLoaderBMCLVersionList extends VersionList<LiteLoaderRemoteVersion> {
+    private final BMCLAPIDownloadProvider downloadProvider;
 
-    public static final LiteLoaderBMCLVersionList INSTANCE = new LiteLoaderBMCLVersionList();
-    public static final String LITELOADER_LIST = "http://dl.liteloader.com/versions/versions.json";
-
-    private LiteLoaderBMCLVersionList() {
-    }
-
-    private static String getLatestSnapshotVersion(String repo) throws Exception {
-        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder builder = factory.newDocumentBuilder();
-        Document doc = builder.parse(repo + "maven-metadata.xml");
-        Element r = doc.getDocumentElement();
-        Element snapshot = (Element) r.getElementsByTagName("snapshot").item(0);
-        Node timestamp = snapshot.getElementsByTagName("timestamp").item(0);
-        Node buildNumber = snapshot.getElementsByTagName("buildNumber").item(0);
-        return timestamp.getTextContent() + "-" + buildNumber.getTextContent();
+    public LiteLoaderBMCLVersionList(BMCLAPIDownloadProvider downloadProvider) {
+        this.downloadProvider = downloadProvider;
     }
 
     @Override
@@ -45,11 +33,11 @@ public final class LiteLoaderBMCLVersionList extends VersionList<LiteLoaderRemot
     }
 
     @Override
-    public Task refreshAsync(DownloadProvider downloadProvider) {
+    public Task<?> refreshAsync() {
         GetTask task = new GetTask(NetworkUtils.toURL(downloadProvider.injectURL(LITELOADER_LIST)));
-        return new Task() {
+        return new Task<Void>() {
             @Override
-            public Collection<Task> getDependents() {
+            public Collection<Task<?>> getDependents() {
                 return Collections.singleton(task);
             }
 
@@ -85,7 +73,7 @@ public final class LiteLoaderBMCLVersionList extends VersionList<LiteLoaderRemot
                         continue;
 
                     String version = v.getVersion();
-                    String url = "http://bmclapi2.bangbang93.com/liteloader/download?version=" + version;
+                    String url = "https://bmclapi2.bangbang93.com/liteloader/download?version=" + version;
                     if (snapshot) {
                         try {
                             version = version.replace("SNAPSHOT", getLatestSnapshotVersion(repository.getUrl() + "com/mumfrey/liteloader/" + v.getVersion() + "/"));
@@ -95,11 +83,24 @@ public final class LiteLoaderBMCLVersionList extends VersionList<LiteLoaderRemot
                     }
 
                     versions.put(key, new LiteLoaderRemoteVersion(gameVersion,
-                            version, downloadProvider.injectURL(url),
+                            version, Collections.singletonList(url),
                             v.getTweakClass(), v.getLibraries()
                     ));
                 }
             }
         };
+    }
+
+    public static final String LITELOADER_LIST = "http://dl.liteloader.com/versions/versions.json";
+
+    private static String getLatestSnapshotVersion(String repo) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(repo + "maven-metadata.xml");
+        Element r = doc.getDocumentElement();
+        Element snapshot = (Element) r.getElementsByTagName("snapshot").item(0);
+        Node timestamp = snapshot.getElementsByTagName("timestamp").item(0);
+        Node buildNumber = snapshot.getElementsByTagName("buildNumber").item(0);
+        return timestamp.getTextContent() + "-" + buildNumber.getTextContent();
     }
 }

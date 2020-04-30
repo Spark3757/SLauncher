@@ -1,11 +1,16 @@
 package ru.spark.slauncher.game;
 
 import com.google.gson.JsonParseException;
+import ru.spark.slauncher.util.DigestUtils;
+import ru.spark.slauncher.util.Hex;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.Validation;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class AssetObject implements Validation {
 
@@ -36,6 +41,11 @@ public final class AssetObject implements Validation {
     @Override
     public void validate() throws JsonParseException {
         if (StringUtils.isBlank(hash) || hash.length() < 2)
-            throw new IllegalStateException("AssetObject hash cannot be blank.");
+            throw new JsonParseException("AssetObject hash cannot be blank.");
+    }
+
+    public boolean validateChecksum(Path file, boolean defaultValue) throws IOException {
+        if (hash == null) return defaultValue;
+        return Hex.encodeHex(DigestUtils.digest("SHA-1", file)).equalsIgnoreCase(hash);
     }
 }

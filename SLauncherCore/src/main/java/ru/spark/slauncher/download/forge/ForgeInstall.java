@@ -1,16 +1,17 @@
 package ru.spark.slauncher.download.forge;
 
+import ru.spark.slauncher.game.Artifact;
 import ru.spark.slauncher.util.Immutable;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class ForgeInstall {
 
     private final String profileName;
     private final String target;
-    private final String path;
+    private final Artifact path;
     private final String version;
     private final String filePath;
     private final String welcome;
@@ -22,7 +23,7 @@ public final class ForgeInstall {
         this(null, null, null, null, null, null, null, null, null);
     }
 
-    public ForgeInstall(String profileName, String target, String path, String version, String filePath, String welcome, String minecraft, String mirrorList, String logo) {
+    public ForgeInstall(String profileName, String target, Artifact path, String version, String filePath, String welcome, String minecraft, String mirrorList, String logo) {
         this.profileName = profileName;
         this.target = target;
         this.path = path;
@@ -42,7 +43,7 @@ public final class ForgeInstall {
         return target;
     }
 
-    public String getPath() {
+    public Artifact getPath() {
         return path;
     }
 

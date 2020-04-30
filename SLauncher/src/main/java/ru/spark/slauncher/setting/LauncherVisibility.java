@@ -3,7 +3,7 @@ package ru.spark.slauncher.setting;
 /**
  * The visibility of launcher.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public enum LauncherVisibility {
 

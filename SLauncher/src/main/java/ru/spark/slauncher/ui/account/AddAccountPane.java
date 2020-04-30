@@ -21,17 +21,18 @@ import javafx.scene.layout.StackPane;
 import ru.spark.slauncher.auth.*;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorDownloadException;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorServer;
-import ru.spark.slauncher.auth.ely.ElyService;
 import ru.spark.slauncher.auth.yggdrasil.GameProfile;
 import ru.spark.slauncher.auth.yggdrasil.RemoteAuthenticationException;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilService;
 import ru.spark.slauncher.game.TexturesLoader;
 import ru.spark.slauncher.setting.Accounts;
+import ru.spark.slauncher.setting.ConfigHolder;
 import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.*;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.BindingMapping;
 
 import java.util.ArrayList;
@@ -42,13 +43,10 @@ import java.util.concurrent.CountDownLatch;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static ru.spark.slauncher.setting.ConfigHolder.config;
 import static ru.spark.slauncher.ui.FXUtils.*;
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AddAccountPane extends StackPane {
 
-    private static final String[] ALLOWED_LINKS = {"register"};
     @FXML
     private JFXTextField txtUsername;
     @FXML
@@ -71,17 +69,17 @@ public class AddAccountPane extends StackPane {
     private JFXButton btnManageServer;
     @FXML
     private SpinnerPane acceptPane;
-
-    private ListProperty<Hyperlink> links = new SimpleListProperty<>();
     @FXML
     private HBox linksContainer;
+
+    private ListProperty<Hyperlink> links = new SimpleListProperty<>();
 
     public AddAccountPane() {
         FXUtils.loadFXML(this, "/assets/fxml/account-add.fxml");
 
         cboServers.setCellFactory(jfxListCellFactory(server -> new TwoLineListItem(server.getName(), server.getUrl())));
         cboServers.setConverter(stringConverter(AuthlibInjectorServer::getName));
-        Bindings.bindContent(cboServers.getItems(), config().getAuthlibInjectorServers());
+        Bindings.bindContent(cboServers.getItems(), ConfigHolder.config().getAuthlibInjectorServers());
         cboServers.getItems().addListener(onInvalidating(this::selectDefaultServer));
         selectDefaultServer();
 
@@ -90,7 +88,7 @@ public class AddAccountPane extends StackPane {
         // try selecting the preferred login type
         cboType.getSelectionModel().select(
                 cboType.getItems().stream()
-                        .filter(type -> Accounts.getLoginType(type).equals(config().getPreferredLoginType()))
+                        .filter(type -> Accounts.getLoginType(type).equals(ConfigHolder.config().getPreferredLoginType()))
                         .findFirst()
                         .orElse(Accounts.FACTORY_OFFLINE));
 
@@ -103,7 +101,7 @@ public class AddAccountPane extends StackPane {
         ReadOnlyObjectProperty<AccountFactory<?>> loginType = cboType.getSelectionModel().selectedItemProperty();
 
         // remember the last used login type
-        loginType.addListener((observable, oldValue, newValue) -> config().setPreferredLoginType(Accounts.getLoginType(newValue)));
+        loginType.addListener((observable, oldValue, newValue) -> ConfigHolder.config().setPreferredLoginType(Accounts.getLoginType(newValue)));
 
         txtPassword.visibleProperty().bind(loginType.isNotEqualTo(Accounts.FACTORY_OFFLINE));
         lblPassword.visibleProperty().bind(txtPassword.visibleProperty());
@@ -111,7 +109,7 @@ public class AddAccountPane extends StackPane {
         cboServers.visibleProperty().bind(loginType.isEqualTo(Accounts.FACTORY_AUTHLIB_INJECTOR));
         lblInjectorServer.visibleProperty().bind(cboServers.visibleProperty());
 
-        txtUsername.getValidators().add(new Validator(i18n("input.email"), str -> !txtPassword.isVisible() || str.contains("@")));
+        txtUsername.getValidators().add(new Validator(I18n.i18n("input.email"), str -> !txtPassword.isVisible() || str.contains("@")));
 
         btnAccept.disableProperty().bind(Bindings.createBooleanBinding(
                 () -> !( // consider the opposite situation: input is valid
@@ -132,6 +130,8 @@ public class AddAccountPane extends StackPane {
         linksContainer.visibleProperty().bind(cboServers.visibleProperty());
     }
 
+    private static final String[] ALLOWED_LINKS = {"register"};
+
     public static List<Hyperlink> createHyperlinks(AuthlibInjectorServer server) {
         if (server == null) {
             return emptyList();
@@ -142,7 +142,7 @@ public class AddAccountPane extends StackPane {
         for (String key : ALLOWED_LINKS) {
             String value = links.get(key);
             if (value != null) {
-                Hyperlink link = new Hyperlink(i18n("account.injector.link." + key));
+                Hyperlink link = new Hyperlink(I18n.i18n("account.injector.link." + key));
                 FXUtils.installSlowTooltip(link, value);
                 link.setOnAction(e -> FXUtils.openLink(value));
                 result.add(link);
@@ -192,7 +192,7 @@ public class AddAccountPane extends StackPane {
         AccountFactory<?> factory = cboType.getSelectionModel().getSelectedItem();
         Object additionalData = getAuthAdditionalData();
 
-        Task.ofResult(() -> factory.create(new Selector(), username, password, additionalData))
+        Task.supplyAsync(() -> factory.create(new Selector(), username, password, additionalData))
                 .whenComplete(Schedulers.javafx(), account -> {
                     int oldIndex = Accounts.getAccounts().indexOf(account);
                     if (oldIndex == -1) {
@@ -236,36 +236,6 @@ public class AddAccountPane extends StackPane {
         Controllers.dialog(new AddAuthlibInjectorServerPane());
     }
 
-    public static String accountException(Exception exception) {
-        if (exception instanceof NoCharacterException) {
-            return i18n("account.failed.no_character");
-        } else if (exception instanceof ServerDisconnectException) {
-            return i18n("account.failed.connect_authentication_server");
-        } else if (exception instanceof ServerResponseMalformedException) {
-            return i18n("account.failed.server_response_malformed");
-        } else if (exception instanceof RemoteAuthenticationException) {
-            RemoteAuthenticationException remoteException = (RemoteAuthenticationException) exception;
-            String remoteMessage = remoteException.getRemoteMessage();
-            if ("ForbiddenOperationException".equals(remoteException.getRemoteName()) && remoteMessage != null) {
-                if (remoteMessage.contains("Invalid credentials"))
-                    return i18n("account.failed.invalid_credentials");
-                else if (remoteMessage.contains("Invalid token"))
-                    return i18n("account.failed.invalid_token");
-                else if (remoteMessage.contains("Invalid username or password"))
-                    return i18n("account.failed.invalid_password");
-            }
-            return exception.getMessage();
-        } else if (exception instanceof AuthlibInjectorDownloadException) {
-            return i18n("account.failed.injector_download_failure");
-        } else if (exception instanceof CharacterDeletedException) {
-            return i18n("account.failed.character_deleted");
-        } else if (exception.getClass() == AuthenticationException.class) {
-            return exception.getLocalizedMessage();
-        } else {
-            return exception.getClass().getName() + ": " + exception.getLocalizedMessage();
-        }
-    }
-
     private class Selector extends BorderPane implements CharacterSelector {
 
         private final AdvancedListBox listBox = new AdvancedListBox();
@@ -277,11 +247,11 @@ public class AddAccountPane extends StackPane {
         public Selector() {
             setStyle("-fx-padding: 8px;");
 
-            cancel.setText(i18n("button.cancel"));
+            cancel.setText(I18n.i18n("button.cancel"));
             StackPane.setAlignment(cancel, Pos.BOTTOM_RIGHT);
             cancel.setOnMouseClicked(e -> latch.countDown());
 
-            listBox.startCategory(i18n("account.choose"));
+            listBox.startCategory(I18n.i18n("account.choose"));
 
             setCenter(listBox);
 
@@ -323,10 +293,35 @@ public class AddAccountPane extends StackPane {
                 runInFX(() -> Selector.this.fireEvent(new DialogCloseEvent()));
             }
         }
+    }
 
-        @Override
-        public ru.spark.slauncher.auth.ely.GameProfile select(ElyService elyService, List<ru.spark.slauncher.auth.ely.GameProfile> names) throws NoSelectedCharacterException {
-            return null;
+    public static String accountException(Exception exception) {
+        if (exception instanceof NoCharacterException) {
+            return I18n.i18n("account.failed.no_character");
+        } else if (exception instanceof ServerDisconnectException) {
+            return I18n.i18n("account.failed.connect_authentication_server");
+        } else if (exception instanceof ServerResponseMalformedException) {
+            return I18n.i18n("account.failed.server_response_malformed");
+        } else if (exception instanceof RemoteAuthenticationException) {
+            RemoteAuthenticationException remoteException = (RemoteAuthenticationException) exception;
+            String remoteMessage = remoteException.getRemoteMessage();
+            if ("ForbiddenOperationException".equals(remoteException.getRemoteName()) && remoteMessage != null) {
+                if (remoteMessage.contains("Invalid credentials"))
+                    return I18n.i18n("account.failed.invalid_credentials");
+                else if (remoteMessage.contains("Invalid token"))
+                    return I18n.i18n("account.failed.invalid_token");
+                else if (remoteMessage.contains("Invalid username or password"))
+                    return I18n.i18n("account.failed.invalid_password");
+            }
+            return exception.getMessage();
+        } else if (exception instanceof AuthlibInjectorDownloadException) {
+            return I18n.i18n("account.failed.injector_download_failure");
+        } else if (exception instanceof CharacterDeletedException) {
+            return I18n.i18n("account.failed.character_deleted");
+        } else if (exception.getClass() == AuthenticationException.class) {
+            return exception.getLocalizedMessage();
+        } else {
+            return exception.getClass().getName() + ": " + exception.getLocalizedMessage();
         }
     }
 }

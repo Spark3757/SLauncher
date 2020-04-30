@@ -14,12 +14,13 @@ import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.onInvalidating;
 
 public class FileItem extends BorderPane {
     private final Label lblPath = new Label();
@@ -43,21 +44,27 @@ public class FileItem extends BorderPane {
         right.setGraphic(SVG.pencil(Theme.blackFillBinding(), 15, 15));
         right.getStyleClass().add("toggle-icon4");
         right.setOnMouseClicked(e -> onExplore());
-        FXUtils.installFastTooltip(right, i18n("button.edit"));
+        FXUtils.installFastTooltip(right, I18n.i18n("button.edit"));
         setRight(right);
 
         Tooltip tip = new Tooltip();
         tip.textProperty().bind(tooltipProperty());
         Tooltip.install(this, tip);
 
-        convertToRelativePath.addListener(FXUtils.onInvalidating(() -> path.set(processPath(path.get()))));
+        convertToRelativePath.addListener(onInvalidating(() -> path.set(processPath(path.get()))));
     }
 
     /**
      * Converts the given path to absolute/relative(if possible) path according to {@link #convertToRelativePathProperty()}.
      */
     private String processPath(String path) {
-        Path given = Paths.get(path).toAbsolutePath();
+        Path given;
+        try {
+            given = Paths.get(path).toAbsolutePath();
+        } catch (IllegalArgumentException e) {
+            return path;
+        }
+
         if (isConvertToRelativePath()) {
             try {
                 return Paths.get(".").normalize().toAbsolutePath().relativize(given).normalize().toString();
@@ -92,59 +99,59 @@ public class FileItem extends BorderPane {
         return name.get();
     }
 
-    public void setName(String name) {
-        this.name.set(name);
-    }
-
     public StringProperty nameProperty() {
         return name;
+    }
+
+    public void setName(String name) {
+        this.name.set(name);
     }
 
     public String getTitle() {
         return title.get();
     }
 
-    public void setTitle(String title) {
-        this.title.set(title);
-    }
-
     public StringProperty titleProperty() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title.set(title);
     }
 
     public String getTooltip() {
         return tooltip.get();
     }
 
-    public void setTooltip(String tooltip) {
-        this.tooltip.set(tooltip);
-    }
-
     public StringProperty tooltipProperty() {
         return tooltip;
+    }
+
+    public void setTooltip(String tooltip) {
+        this.tooltip.set(tooltip);
     }
 
     public String getPath() {
         return path.get();
     }
 
-    public void setPath(String path) {
-        this.path.set(path);
-    }
-
     public StringProperty pathProperty() {
         return path;
+    }
+
+    public void setPath(String path) {
+        this.path.set(path);
     }
 
     public boolean isConvertToRelativePath() {
         return convertToRelativePath.get();
     }
 
-    public void setConvertToRelativePath(boolean convertToRelativePath) {
-        this.convertToRelativePath.set(convertToRelativePath);
-    }
-
     public BooleanProperty convertToRelativePathProperty() {
         return convertToRelativePath;
+    }
+
+    public void setConvertToRelativePath(boolean convertToRelativePath) {
+        this.convertToRelativePath.set(convertToRelativePath);
     }
 }

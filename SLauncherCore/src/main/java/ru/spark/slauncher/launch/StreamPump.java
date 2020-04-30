@@ -13,9 +13,9 @@ import java.util.logging.Level;
 /**
  * Pump the given input stream.
  *
- * @author Spark1337
+ * @author spark1337
  */
-final class StreamPump implements Runnable {
+public final class StreamPump implements Runnable {
 
     private final InputStream inputStream;
     private final Consumer<String> callback;

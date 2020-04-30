@@ -9,7 +9,7 @@ import ru.spark.slauncher.ui.Controllers;
 /**
  * Indicates a close operation on the dialog.
  *
- * @author Spark1337
+ * @author spark1337
  * @see Controllers#dialog(Region)
  */
 public class DialogCloseEvent extends Event {

@@ -1,14 +1,14 @@
 package ru.spark.slauncher.download.forge;
 
+import ru.spark.slauncher.download.ArtifactMalformedException;
 import ru.spark.slauncher.download.DefaultDependencyManager;
+import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.game.GameLibrariesTask;
-import ru.spark.slauncher.download.optifine.OptiFineInstallTask;
-import ru.spark.slauncher.game.*;
+import ru.spark.slauncher.game.Artifact;
+import ru.spark.slauncher.game.DefaultGameRepository;
+import ru.spark.slauncher.game.Library;
+import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.task.TaskResult;
-import ru.spark.slauncher.util.DigestUtils;
-import ru.spark.slauncher.util.Hex;
-import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.function.ExceptionalFunction;
 import ru.spark.slauncher.util.gson.JsonUtils;
@@ -18,11 +18,11 @@ import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.platform.CommandBuilder;
 import ru.spark.slauncher.util.platform.JavaVersion;
 import ru.spark.slauncher.util.platform.OperatingSystem;
+import ru.spark.slauncher.util.platform.SystemUtils;
 
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,25 +30,31 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
-import java.util.stream.Collectors;
+import java.util.zip.ZipException;
 
-public class ForgeNewInstallTask extends TaskResult<Version> {
+import static ru.spark.slauncher.util.DigestUtils.digest;
+import static ru.spark.slauncher.util.Hex.encodeHex;
+import static ru.spark.slauncher.util.Logging.LOG;
+
+public class ForgeNewInstallTask extends Task<Version> {
 
     private final DefaultDependencyManager dependencyManager;
     private final DefaultGameRepository gameRepository;
     private final Version version;
     private final Path installer;
-    private final List<Task> dependents = new LinkedList<>();
-    private final List<Task> dependencies = new LinkedList<>();
+    private final List<Task<?>> dependents = new LinkedList<>();
+    private final List<Task<?>> dependencies = new LinkedList<>();
 
     private ForgeNewInstallProfile profile;
     private Version forgeVersion;
+    private final String selfVersion;
 
-    public ForgeNewInstallTask(DefaultDependencyManager dependencyManager, Version version, Path installer) {
+    ForgeNewInstallTask(DefaultDependencyManager dependencyManager, Version version, String selfVersion, Path installer) {
         this.dependencyManager = dependencyManager;
         this.gameRepository = dependencyManager.getGameRepository();
         this.version = version;
         this.installer = installer;
+        this.selfVersion = selfVersion;
 
         setSignificance(TaskSignificance.MINOR);
     }
@@ -59,18 +65,18 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
         else if (StringUtils.isSurrounded(literal, "'", "'"))
             return StringUtils.removeSurrounding(literal, "'");
         else if (StringUtils.isSurrounded(literal, "[", "]"))
-            return gameRepository.getArtifactFile(version, new Artifact(StringUtils.removeSurrounding(literal, "[", "]"))).toString();
+            return gameRepository.getArtifactFile(version, Artifact.fromDescriptor(StringUtils.removeSurrounding(literal, "[", "]"))).toString();
         else
             return plainConverter.apply(literal);
     }
 
     @Override
-    public Collection<Task> getDependents() {
+    public Collection<Task<?>> getDependents() {
         return dependents;
     }
 
     @Override
-    public List<Task> getDependencies() {
+    public Collection<Task<?>> getDependencies() {
         return dependencies;
     }
 
@@ -102,14 +108,11 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
             }
         }
 
-        dependents.add(new GameLibrariesTask(dependencyManager, version, profile.getLibraries()));
+        dependents.add(new GameLibrariesTask(dependencyManager, version, true, profile.getLibraries()));
     }
 
     @Override
     public void execute() throws Exception {
-        if ("net.minecraft.launchwrapper.Launch".equals(version.getMainClass()))
-            throw new OptiFineInstallTask.UnsupportedOptiFineInstallationException();
-
         Path temp = Files.createTempDirectory("forge_installer");
         int finished = 0;
         try (FileSystem fs = CompressingUtils.createReadOnlyZipFileSystem(installer)) {
@@ -146,7 +149,7 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
                     value = parseLiteral(value, data, ExceptionalFunction.identity());
 
                     if (key == null || value == null) {
-                        throw new Exception("Invalid forge installation configuration");
+                        throw new ArtifactMalformedException("Invalid forge installation configuration");
                     }
 
                     outputs.put(key, value);
@@ -155,12 +158,12 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
                     if (Files.exists(artifact)) {
                         String code;
                         try (InputStream stream = Files.newInputStream(artifact)) {
-                            code = Hex.encodeHex(DigestUtils.digest("SHA-1", stream));
+                            code = encodeHex(digest("SHA-1", stream));
                         }
 
                         if (!Objects.equals(code, value)) {
                             Files.delete(artifact);
-                            Logging.LOG.info("Found existing file is not valid: " + artifact);
+                            LOG.info("Found existing file is not valid: " + artifact);
 
                             miss = true;
                         }
@@ -201,25 +204,20 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
 
                 command.add(mainClass);
 
-                List<String> args = processor.getArgs().stream().map(arg -> {
+                List<String> args = new ArrayList<>(processor.getArgs().size());
+                for (String arg : processor.getArgs()) {
                     String parsed = parseLiteral(arg, data, ExceptionalFunction.identity());
                     if (parsed == null)
-                        throw new IllegalStateException("Invalid forge installation configuration");
-                    return parsed;
-                }).collect(Collectors.toList());
+                        throw new ArtifactMalformedException("Invalid forge installation configuration");
+                    args.add(parsed);
+                }
 
                 command.addAll(args);
 
-                Logging.LOG.info("Executing external processor " + processor.getJar().toString() + ", command line: " + new CommandBuilder().addAll(command).toString());
-                Process process = new ProcessBuilder(command).start();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                    for (String line; (line = reader.readLine()) != null; ) {
-                        System.out.println(line);
-                    }
-                }
-                int exitCode = process.waitFor();
+                LOG.info("Executing external processor " + processor.getJar().toString() + ", command line: " + new CommandBuilder().addAll(command).toString());
+                int exitCode = SystemUtils.callExternalProcess(command);
                 if (exitCode != 0)
-                    throw new IllegalStateException("Game processor exited abnormally");
+                    throw new IOException("Game processor exited abnormally");
 
                 for (Map.Entry<String, String> entry : outputs.entrySet()) {
                     Path artifact = Paths.get(entry.getKey());
@@ -228,7 +226,7 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
 
                     String code;
                     try (InputStream stream = Files.newInputStream(artifact)) {
-                        code = Hex.encodeHex(DigestUtils.digest("SHA-1", stream));
+                        code = encodeHex(digest("SHA-1", stream));
                     }
 
                     if (!Objects.equals(code, entry.getValue())) {
@@ -239,18 +237,15 @@ public class ForgeNewInstallTask extends TaskResult<Version> {
 
                 updateProgress(++finished, processors.size());
             }
+        } catch (ZipException ex) {
+            throw new ArtifactMalformedException("Malformed forge installer file", ex);
         }
 
-        // resolve the version
-        SimpleVersionProvider provider = new SimpleVersionProvider();
-        provider.addVersion(version);
-
         setResult(forgeVersion
-                .setInheritsFrom(version.getId())
-                .resolve(provider).setJar(null)
-                .setId(version.getId()).setLogging(Collections.emptyMap()));
-
-        dependencies.add(dependencyManager.checkLibraryCompletionAsync(forgeVersion));
+                .setPriority(30000)
+                .setId(LibraryAnalyzer.LibraryType.FORGE.getPatchId())
+                .setVersion(selfVersion));
+        dependencies.add(dependencyManager.checkLibraryCompletionAsync(forgeVersion, true));
 
         FileUtils.deleteDirectory(temp.toFile());
     }

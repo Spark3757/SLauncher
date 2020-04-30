@@ -10,7 +10,7 @@ import javafx.scene.text.Text;
 import ru.spark.slauncher.util.Lang;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class ClassTitle extends StackPane {
     private final Node content;

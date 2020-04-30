@@ -5,8 +5,8 @@
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane">
     <fx:define>
     </fx:define>
@@ -17,7 +17,7 @@
         <bottom>
             <HBox alignment="CENTER_RIGHT" style="-fx-padding: 16 16 16 0;">
                 <JFXButton fx:id="btnNext" onMouseClicked="#onNext" prefWidth="100" prefHeight="40" buttonType="RAISED"
-                           text="%wizard.finish" styleClass="jfx-button-raised"/>
+                           text="%wizard.next" styleClass="jfx-button-raised"/>
             </HBox>
         </bottom>
     </BorderPane>

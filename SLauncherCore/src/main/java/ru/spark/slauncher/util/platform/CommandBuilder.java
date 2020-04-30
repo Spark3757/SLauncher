@@ -20,36 +20,11 @@ public final class CommandBuilder {
         this.os = os;
     }
 
-    private static String parseWindows(String s) {
-        String escape = " \t\"^&<>|";
-        if (StringUtils.containsOne(s, escape.toCharArray()))
-            // The argument has not been quoted, add quotes.
-            return '"' + s
-                    .replace("\\", "\\\\")
-                    .replace("\"", "\"\"")
-                    + '"';
-        else {
-            return s;
-        }
-    }
-
-    private static String parseBash(String s) {
-        String escaping = " \t\"!#$&'()*,;<=>?[\\]^`{|}~";
-        String escaped = "\"$&`";
-        if (s.indexOf(' ') >= 0 || s.indexOf('\t') >= 0 || StringUtils.containsOne(s, escaping.toCharArray())) {
-            // The argument has not been quoted, add quotes.
-            for (char ch : escaped.toCharArray())
-                s = s.replace("" + ch, "\\" + ch);
-            return '"' + s + '"';
-        } else
-            return s;
-    }
-
     private String parse(String s) {
         if (OperatingSystem.WINDOWS == os) {
-            return parseWindows(s);
+            return parseBatch(s);
         } else {
-            return parseBash(s);
+            return parseShell(s);
         }
     }
 
@@ -104,5 +79,35 @@ public final class CommandBuilder {
             this.arg = arg;
             this.parse = parse;
         }
+
+        @Override
+        public String toString() {
+            return parse ? (OperatingSystem.WINDOWS == OperatingSystem.CURRENT_OS ? parseBatch(arg) : parseShell(arg)) : arg;
+        }
+    }
+
+    private static String parseBatch(String s) {
+        String escape = " \t\"^&<>|";
+        if (StringUtils.containsOne(s, escape.toCharArray()))
+            // The argument has not been quoted, add quotes.
+            return '"' + s
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    + '"';
+        else {
+            return s;
+        }
+    }
+
+    private static String parseShell(String s) {
+        String escaping = " \t\"!#$&'()*,;<=>?[\\]^`{|}~";
+        String escaped = "\"$&`";
+        if (s.indexOf(' ') >= 0 || s.indexOf('\t') >= 0 || StringUtils.containsOne(s, escaping.toCharArray())) {
+            // The argument has not been quoted, add quotes.
+            for (char ch : escaped.toCharArray())
+                s = s.replace("" + ch, "\\" + ch);
+            return '"' + s + '"';
+        } else
+            return s;
     }
 }

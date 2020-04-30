@@ -18,8 +18,7 @@ import javafx.scene.layout.VBox;
 import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import ru.spark.slauncher.util.i18n.I18n;
 
 @DefaultProperty("image")
 public final class ImagePickerItem extends BorderPane {
@@ -46,7 +45,7 @@ public final class ImagePickerItem extends BorderPane {
         deleteButton.onMouseClickedProperty().bind(onDeleteButtonClicked);
         deleteButton.getStyleClass().add("toggle-icon4");
 
-        FXUtils.installFastTooltip(selectButton, i18n("button.edit"));
+        FXUtils.installFastTooltip(selectButton, I18n.i18n("button.edit"));
 
         HBox hBox = new HBox();
         hBox.getChildren().setAll(imageView, selectButton, deleteButton);
@@ -68,48 +67,48 @@ public final class ImagePickerItem extends BorderPane {
         return title.get();
     }
 
-    public void setTitle(String title) {
-        this.title.set(title);
-    }
-
     public StringProperty titleProperty() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title.set(title);
     }
 
     public EventHandler<? super MouseEvent> getOnSelectButtonClicked() {
         return onSelectButtonClicked.get();
     }
 
-    public void setOnSelectButtonClicked(EventHandler<? super MouseEvent> onSelectButtonClicked) {
-        this.onSelectButtonClicked.set(onSelectButtonClicked);
-    }
-
     public ObjectProperty<EventHandler<? super MouseEvent>> onSelectButtonClickedProperty() {
         return onSelectButtonClicked;
+    }
+
+    public void setOnSelectButtonClicked(EventHandler<? super MouseEvent> onSelectButtonClicked) {
+        this.onSelectButtonClicked.set(onSelectButtonClicked);
     }
 
     public EventHandler<? super MouseEvent> getOnDeleteButtonClicked() {
         return onDeleteButtonClicked.get();
     }
 
-    public void setOnDeleteButtonClicked(EventHandler<? super MouseEvent> onDeleteButtonClicked) {
-        this.onDeleteButtonClicked.set(onDeleteButtonClicked);
-    }
-
     public ObjectProperty<EventHandler<? super MouseEvent>> onDeleteButtonClickedProperty() {
         return onDeleteButtonClicked;
+    }
+
+    public void setOnDeleteButtonClicked(EventHandler<? super MouseEvent> onDeleteButtonClicked) {
+        this.onDeleteButtonClicked.set(onDeleteButtonClicked);
     }
 
     public Image getImage() {
         return image.get();
     }
 
-    public void setImage(Image image) {
-        this.image.set(image);
-    }
-
     public ObjectProperty<Image> imageProperty() {
         return image;
+    }
+
+    public void setImage(Image image) {
+        this.image.set(image);
     }
 
     public ImageView getImageView() {

@@ -1,27 +1,34 @@
 package ru.spark.slauncher.ui.versions;
 
+import javafx.scene.control.Tooltip;
 import ru.spark.slauncher.setting.Profiles;
 import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
 import ru.spark.slauncher.ui.construct.AdvancedListItem;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import static ru.spark.slauncher.ui.FXUtils.newImage;
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class GameAdvancedListItem extends AdvancedListItem {
+    private final Tooltip tooltip;
 
     public GameAdvancedListItem() {
+        tooltip = new Tooltip();
+        FXUtils.installFastTooltip(this, tooltip);
+
         FXUtils.onChangeAndOperate(Profiles.selectedVersionProperty(), version -> {
             if (version != null && Profiles.getSelectedProfile() != null &&
                     Profiles.getSelectedProfile().getRepository().hasVersion(version)) {
                 setTitle(version);
                 setSubtitle(null);
                 setImage(Profiles.getSelectedProfile().getRepository().getVersionIconImage(version));
+                tooltip.setText(version);
             } else {
-                setTitle(i18n("version.empty"));
-                setSubtitle(i18n("version.empty.add"));
+                setTitle(I18n.i18n("version.empty"));
+                setSubtitle(I18n.i18n("version.empty.add"));
                 setImage(newImage("/assets/img/grass.png"));
+                tooltip.setText("");
             }
         });
 

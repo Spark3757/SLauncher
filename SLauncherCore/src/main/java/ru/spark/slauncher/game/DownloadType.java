@@ -1,10 +1,12 @@
 package ru.spark.slauncher.game;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public enum DownloadType {
     CLIENT,
     SERVER,
-    WINDOWS_SERVER
+    WINDOWS_SERVER,
+    CLIENT_MAPPINGS,
+    SERVER_MAPPINGS
 }

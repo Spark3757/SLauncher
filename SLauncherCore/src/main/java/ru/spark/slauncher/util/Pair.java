@@ -4,21 +4,20 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class Pair<K, V> implements Map.Entry<K, V> {
+
+    public static <K, V> Pair<K, V> pair(K key, V value) {
+        return new Pair<>(key, value);
+    }
 
     private K key;
     private V value;
 
-    @Deprecated
-    public Pair(K key, V value) {
+    private Pair(K key, V value) {
         this.key = key;
         this.value = value;
-    }
-
-    public static <K, V> Pair<K, V> pair(K key, V value) {
-        return new Pair<>(key, value);
     }
 
     @Override

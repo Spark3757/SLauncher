@@ -1,5 +1,6 @@
 package ru.spark.slauncher.event;
 
+import ru.spark.slauncher.launch.ExitWaiter;
 import ru.spark.slauncher.util.platform.ManagedProcess;
 
 /**
@@ -7,7 +8,7 @@ import ru.spark.slauncher.util.platform.ManagedProcess;
  * <br>
  * This event is fired on the {@link EventBus#EVENT_BUS}
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class ProcessStoppedEvent extends Event {
 
@@ -16,7 +17,7 @@ public class ProcessStoppedEvent extends Event {
     /**
      * Constructor.
      *
-     * @param source  {@link ru.spark.slauncher.launch.ExitWaiter}
+     * @param source  {@link ExitWaiter}
      * @param process minecraft process
      */
     public ProcessStoppedEvent(Object source, ManagedProcess process) {

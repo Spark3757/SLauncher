@@ -3,7 +3,7 @@ package ru.spark.slauncher.util;
 import java.util.function.Predicate;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ReflectionHelper {
 

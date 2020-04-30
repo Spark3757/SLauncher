@@ -15,8 +15,7 @@ import ru.spark.slauncher.ui.SVG;
 import ru.spark.slauncher.ui.construct.IconedMenuItem;
 import ru.spark.slauncher.ui.construct.PopupMenu;
 import ru.spark.slauncher.ui.construct.TwoLineListItem;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import ru.spark.slauncher.util.i18n.I18n;
 
 public class WorldListItemSkin extends SkinBase<WorldListItem> {
 
@@ -39,6 +38,8 @@ public class WorldListItemSkin extends SkinBase<WorldListItem> {
         imageViewContainer.getChildren().setAll(imageView);
 
         TwoLineListItem item = new TwoLineListItem();
+        item.titleProperty().bind(skinnable.titleProperty());
+        item.subtitleProperty().bind(skinnable.subtitleProperty());
         BorderPane.setAlignment(item, Pos.CENTER);
         center.getChildren().setAll(imageView, item);
         root.setCenter(center);
@@ -47,9 +48,9 @@ public class WorldListItemSkin extends SkinBase<WorldListItem> {
         JFXPopup popup = new JFXPopup(menu);
 
         menu.getContent().setAll(
-                new IconedMenuItem(FXUtils.limitingSize(SVG.gear(Theme.blackFillBinding(), 14, 14), 14, 14), i18n("world.datapack"), FXUtils.withJFXPopupClosing(skinnable::manageDatapacks, popup)),
-                new IconedMenuItem(FXUtils.limitingSize(SVG.export(Theme.blackFillBinding(), 14, 14), 14, 14), i18n("world.export"), FXUtils.withJFXPopupClosing(skinnable::export, popup)),
-                new IconedMenuItem(FXUtils.limitingSize(SVG.folderOpen(Theme.blackFillBinding(), 14, 14), 14, 14), i18n("world.reveal"), FXUtils.withJFXPopupClosing(skinnable::reveal, popup)));
+                new IconedMenuItem(FXUtils.limitingSize(SVG.gear(Theme.blackFillBinding(), 14, 14), 14, 14), I18n.i18n("world.datapack"), FXUtils.withJFXPopupClosing(skinnable::manageDatapacks, popup)),
+                new IconedMenuItem(FXUtils.limitingSize(SVG.export(Theme.blackFillBinding(), 14, 14), 14, 14), I18n.i18n("world.export"), FXUtils.withJFXPopupClosing(skinnable::export, popup)),
+                new IconedMenuItem(FXUtils.limitingSize(SVG.folderOpen(Theme.blackFillBinding(), 14, 14), 14, 14), I18n.i18n("world.reveal"), FXUtils.withJFXPopupClosing(skinnable::reveal, popup)));
 
         HBox right = new HBox();
         right.setAlignment(Pos.CENTER_RIGHT);
@@ -64,10 +65,9 @@ public class WorldListItemSkin extends SkinBase<WorldListItem> {
         right.getChildren().add(btnManage);
         root.setRight(right);
 
-        root.setStyle("-fx-background-color: white; -fx-padding: 8 8 8 0;");
+        root.getStyleClass().add("card");
+        root.setStyle("-fx-padding: 8 8 8 0");
         JFXDepthManager.setDepth(root, 1);
-        item.titleProperty().bind(skinnable.titleProperty());
-        item.subtitleProperty().bind(skinnable.subtitleProperty());
 
         getChildren().setAll(root);
     }

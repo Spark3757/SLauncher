@@ -8,7 +8,7 @@ import ru.spark.slauncher.util.ToStringBuilder;
  * <br>
  * This event is fired on the {@link EventBus#EVENT_BUS}
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class RemoveVersionEvent extends Event {
 

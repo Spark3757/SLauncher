@@ -6,7 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public enum Log4jLevel {
     FATAL(1, Color.web("#F7A699")),
@@ -17,9 +17,6 @@ public enum Log4jLevel {
     TRACE(6, Color.BLUE),
     ALL(2147483647, Color.BLACK);
 
-    public static final Pattern MINECRAFT_LOGGER = Pattern.compile("\\[(?<timestamp>[0-9:]+)] \\[[^/]+/(?<level>[^]]+)]");
-    public static final Pattern MINECRAFT_LOGGER_CATEGORY = Pattern.compile("\\[(?<timestamp>[0-9:]+)] \\[[^/]+/(?<level>[^]]+)] \\[(?<category>[^]]+)]");
-    public static final String JAVA_SYMBOL = "([a-zA-Z_$][a-zA-Z\\d_$]*\\.)+[a-zA-Z_$][a-zA-Z\\d_$]*";
     private final int level;
     private final Color color;
 
@@ -27,6 +24,22 @@ public enum Log4jLevel {
         this.level = level;
         this.color = color;
     }
+
+    public int getLevel() {
+        return level;
+    }
+
+    public Color getColor() {
+        return color;
+    }
+
+    public boolean lessOrEqual(Log4jLevel level) {
+        return this.level <= level.level;
+    }
+
+    public static final Pattern MINECRAFT_LOGGER = Pattern.compile("\\[(?<timestamp>[0-9:]+)] \\[[^/]+/(?<level>[^]]+)]");
+    public static final Pattern MINECRAFT_LOGGER_CATEGORY = Pattern.compile("\\[(?<timestamp>[0-9:]+)] \\[[^/]+/(?<level>[^]]+)] \\[(?<category>[^]]+)]");
+    public static final String JAVA_SYMBOL = "([a-zA-Z_$][a-zA-Z\\d_$]*\\.)+[a-zA-Z_$][a-zA-Z\\d_$]*";
 
     public static Log4jLevel guessLevel(String line) {
         Log4jLevel level = null;
@@ -108,17 +121,5 @@ public enum Log4jLevel {
 
     public static boolean guessLogLineError(String log) {
         return isError(guessLevel(log));
-    }
-
-    public int getLevel() {
-        return level;
-    }
-
-    public Color getColor() {
-        return color;
-    }
-
-    public boolean lessOrEqual(Log4jLevel level) {
-        return this.level <= level.level;
     }
 }

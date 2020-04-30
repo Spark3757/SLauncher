@@ -8,7 +8,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.TreeItem;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
-import ru.spark.slauncher.game.ModAdviser;
+import ru.spark.slauncher.mod.ModAdviser;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.NoneMultipleSelectionModel;
@@ -17,6 +17,7 @@ import ru.spark.slauncher.ui.wizard.WizardPage;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 
 import java.io.File;
@@ -25,34 +26,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ModpackFileSelectionPage extends StackPane implements WizardPage {
-    public static final String MODPACK_FILE_SELECTION = "modpack.accepted";
-    private static final Map<String, String> TRANSLATION = Lang.mapOf(
-            Pair.pair("minecraft/servers.dat", i18n("modpack.files.servers_dat")),
-            Pair.pair("minecraft/saves", i18n("modpack.files.saves")),
-            Pair.pair("minecraft/mods", i18n("modpack.files.mods")),
-            Pair.pair("minecraft/config", i18n("modpack.files.config")),
-            Pair.pair("minecraft/liteconfig", i18n("modpack.files.liteconfig")),
-            Pair.pair("minecraft/resourcepacks", i18n("modpack.files.resourcepacks")),
-            Pair.pair("minecraft/resources", i18n("modpack.files.resourcepacks")),
-            Pair.pair("minecraft/options.txt", i18n("modpack.files.options_txt")),
-            Pair.pair("minecraft/optionsshaders.txt", i18n("modpack.files.optionsshaders_txt")),
-            Pair.pair("minecraft/mods/VoxelMods", i18n("modpack.files.mods.voxelmods")),
-            Pair.pair("minecraft/dumps", i18n("modpack.files.dumps")),
-            Pair.pair("minecraft/blueprints", i18n("modpack.files.blueprints")),
-            Pair.pair("minecraft/scripts", i18n("modpack.files.scripts"))
-    );
     private final WizardController controller;
     private final String version;
     private final ModAdviser adviser;
-    private final CheckBoxTreeItem<String> rootNode;
     @FXML
     private JFXTreeView<String> treeView;
+    private final CheckBoxTreeItem<String> rootNode;
 
     public ModpackFileSelectionPage(WizardController controller, Profile profile, String version, ModAdviser adviser) {
         this.controller = controller;
@@ -150,6 +133,24 @@ public final class ModpackFileSelectionPage extends StackPane implements WizardP
 
     @Override
     public String getTitle() {
-        return i18n("modpack.wizard.step.2.title");
+        return I18n.i18n("modpack.wizard.step.2.title");
     }
+
+    public static final String MODPACK_FILE_SELECTION = "modpack.accepted";
+    private static final Map<String, String> TRANSLATION = Lang.mapOf(
+            Pair.pair("minecraft/slauncherversion.cfg", I18n.i18n("modpack.files.slauncherversion_cfg")),
+            Pair.pair("minecraft/servers.dat", I18n.i18n("modpack.files.servers_dat")),
+            Pair.pair("minecraft/saves", I18n.i18n("modpack.files.saves")),
+            Pair.pair("minecraft/mods", I18n.i18n("modpack.files.mods")),
+            Pair.pair("minecraft/config", I18n.i18n("modpack.files.config")),
+            Pair.pair("minecraft/liteconfig", I18n.i18n("modpack.files.liteconfig")),
+            Pair.pair("minecraft/resourcepacks", I18n.i18n("modpack.files.resourcepacks")),
+            Pair.pair("minecraft/resources", I18n.i18n("modpack.files.resourcepacks")),
+            Pair.pair("minecraft/options.txt", I18n.i18n("modpack.files.options_txt")),
+            Pair.pair("minecraft/optionsshaders.txt", I18n.i18n("modpack.files.optionsshaders_txt")),
+            Pair.pair("minecraft/mods/VoxelMods", I18n.i18n("modpack.files.mods.voxelmods")),
+            Pair.pair("minecraft/dumps", I18n.i18n("modpack.files.dumps")),
+            Pair.pair("minecraft/blueprints", I18n.i18n("modpack.files.blueprints")),
+            Pair.pair("minecraft/scripts", I18n.i18n("modpack.files.scripts"))
+    );
 }

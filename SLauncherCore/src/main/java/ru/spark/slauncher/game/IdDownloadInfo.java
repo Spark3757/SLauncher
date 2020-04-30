@@ -7,7 +7,7 @@ import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.TolerableValidationException;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public class IdDownloadInfo extends DownloadInfo {

@@ -22,13 +22,13 @@ import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 class ComponentListCell extends StackPane {
     private final Node content;
-    private final BooleanProperty expanded = new SimpleBooleanProperty(this, "expanded", false);
     private Animation expandAnimation;
     private Rectangle clipRect;
+    private final BooleanProperty expanded = new SimpleBooleanProperty(this, "expanded", false);
 
     ComponentListCell(Node content) {
         this.content = content;
@@ -109,7 +109,7 @@ class ComponentListCell extends StackPane {
             VBox container = new VBox();
             container.setPadding(new Insets(8, 0, 0, 0));
             FXUtils.setLimitHeight(container, 0);
-            FXUtils.setOverflowHidden(container, true);
+            FXUtils.setOverflowHidden(container);
             container.getChildren().setAll(content);
             groupNode.setBottom(container);
 
@@ -126,6 +126,7 @@ class ComponentListCell extends StackPane {
 
                 if (isExpanded()) {
                     updateClip(newHeight);
+                    list.onExpand();
                 }
 
                 expandAnimation = new Timeline(new KeyFrame(new Duration(320.0),
@@ -144,19 +145,20 @@ class ComponentListCell extends StackPane {
                     expandIcon.setRotate(newValue ? 180 : 0));
 
             getChildren().setAll(groupNode);
-        } else
+        } else {
             getChildren().setAll(content);
+        }
     }
 
     public boolean isExpanded() {
         return expanded.get();
     }
 
-    public void setExpanded(boolean expanded) {
-        this.expanded.set(expanded);
-    }
-
     public BooleanProperty expandedProperty() {
         return expanded;
+    }
+
+    public void setExpanded(boolean expanded) {
+        this.expanded.set(expanded);
     }
 }

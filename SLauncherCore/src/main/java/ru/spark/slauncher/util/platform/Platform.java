@@ -9,7 +9,7 @@ import java.lang.reflect.Type;
  * The platform that indicates which the platform of operating system is, 64-bit or 32-bit.
  * Of course, 128-bit and 16-bit is not supported.
  *
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(Platform.Serializer.class)
 public enum Platform {
@@ -17,14 +17,6 @@ public enum Platform {
     BIT_64("64"),
     UNKNOWN("unknown");
 
-    /**
-     * True if current Java Environment is 64-bit.
-     */
-    public static final boolean IS_64_BIT = OperatingSystem.SYSTEM_ARCHITECTURE.contains("64");
-    /**
-     * The platform of current Java Environment.
-     */
-    public static final Platform PLATFORM = IS_64_BIT ? BIT_64 : BIT_32;
     private final String bit;
 
     Platform(String bit) {
@@ -34,6 +26,16 @@ public enum Platform {
     public String getBit() {
         return bit;
     }
+
+    /**
+     * True if current Java Environment is 64-bit.
+     */
+    public static final boolean IS_64_BIT = OperatingSystem.SYSTEM_ARCHITECTURE.contains("64");
+
+    /**
+     * The platform of current Java Environment.
+     */
+    public static final Platform PLATFORM = IS_64_BIT ? BIT_64 : BIT_32;
 
     /**
      * The json serializer to {@link Platform}.

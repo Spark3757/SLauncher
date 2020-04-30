@@ -6,7 +6,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.scene.Node;
 
 @DefaultProperty("content")
-public final class ComponentSublist extends ComponentList {
+public class ComponentSublist extends ComponentList {
 
     private final ObjectProperty<Node> headerLeft = new SimpleObjectProperty<>(this, "headerLeft");
     private final ObjectProperty<Node> headerRight = new SimpleObjectProperty<>(this, "headerRight");
@@ -19,23 +19,23 @@ public final class ComponentSublist extends ComponentList {
         return headerLeft.get();
     }
 
-    public void setHeaderLeft(Node headerLeft) {
-        this.headerLeft.set(headerLeft);
-    }
-
     public ObjectProperty<Node> headerLeftProperty() {
         return headerLeft;
+    }
+
+    public void setHeaderLeft(Node headerLeft) {
+        this.headerLeft.set(headerLeft);
     }
 
     public Node getHeaderRight() {
         return headerRight.get();
     }
 
-    public void setHeaderRight(Node headerRight) {
-        this.headerRight.set(headerRight);
-    }
-
     public ObjectProperty<Node> headerRightProperty() {
         return headerRight;
+    }
+
+    public void setHeaderRight(Node headerRight) {
+        this.headerRight.set(headerRight);
     }
 }

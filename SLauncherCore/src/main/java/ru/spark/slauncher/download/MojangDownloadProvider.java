@@ -1,15 +1,31 @@
 package ru.spark.slauncher.download;
 
+import ru.spark.slauncher.download.fabric.FabricVersionList;
 import ru.spark.slauncher.download.forge.ForgeBMCLVersionList;
 import ru.spark.slauncher.download.game.GameVersionList;
 import ru.spark.slauncher.download.liteloader.LiteLoaderVersionList;
 import ru.spark.slauncher.download.optifine.OptiFineBMCLVersionList;
 
 /**
- * @author Spark1337
+ * @author spark1337
  * @see <a href="http://wiki.vg">http://wiki.vg</a>
  */
 public class MojangDownloadProvider implements DownloadProvider {
+    private final GameVersionList game;
+    private final FabricVersionList fabric;
+    private final ForgeBMCLVersionList forge;
+    private final LiteLoaderVersionList liteLoader;
+    private final OptiFineBMCLVersionList optifine;
+
+    public MojangDownloadProvider() {
+        String apiRoot = "https://bmclapi2.bangbang93.com";
+
+        this.game = new GameVersionList(this);
+        this.fabric = new FabricVersionList(this);
+        this.forge = new ForgeBMCLVersionList(apiRoot);
+        this.liteLoader = new LiteLoaderVersionList(this);
+        this.optifine = new OptiFineBMCLVersionList(apiRoot);
+    }
 
     @Override
     public String getVersionListURL() {
@@ -25,13 +41,15 @@ public class MojangDownloadProvider implements DownloadProvider {
     public VersionList<?> getVersionListById(String id) {
         switch (id) {
             case "game":
-                return GameVersionList.INSTANCE;
+                return game;
+            case "fabric":
+                return fabric;
             case "forge":
-                return ForgeBMCLVersionList.INSTANCE;
+                return forge;
             case "liteloader":
-                return LiteLoaderVersionList.INSTANCE;
+                return liteLoader;
             case "optifine":
-                return OptiFineBMCLVersionList.INSTANCE;
+                return optifine;
             default:
                 throw new IllegalArgumentException("Unrecognized version list id: " + id);
         }
@@ -39,7 +57,11 @@ public class MojangDownloadProvider implements DownloadProvider {
 
     @Override
     public String injectURL(String baseURL) {
-        return baseURL
-                .replaceFirst("https?://files\\.minecraftforge\\.net/maven", "https://bmclapi2.bangbang93.com/maven");
+        return baseURL;
+    }
+
+    @Override
+    public int getConcurrency() {
+        return 6;
     }
 }

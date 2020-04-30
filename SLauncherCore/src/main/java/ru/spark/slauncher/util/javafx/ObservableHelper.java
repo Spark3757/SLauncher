@@ -9,7 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 /**
  * Helper class for implementing {@link Observable}.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class ObservableHelper implements Observable, InvalidationListener {
 

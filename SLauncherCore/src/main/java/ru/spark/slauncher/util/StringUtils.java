@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class StringUtils {
 
@@ -198,5 +198,23 @@ public final class StringUtils {
 
     public static String parseColorEscapes(String original) {
         return original.replaceAll("\u00A7\\d", "");
+    }
+
+    public static String parseEscapeSequence(String str) {
+        StringBuilder builder = new StringBuilder();
+        boolean inEscape = false;
+        for (int i = 0; i < str.length(); i++) {
+            char ch = str.charAt(i);
+            if (ch == '\033') {
+                inEscape = true;
+            }
+            if (!inEscape) {
+                builder.append(ch);
+            }
+            if (inEscape && ch == 'm') {
+                inEscape = false;
+            }
+        }
+        return builder.toString();
     }
 }

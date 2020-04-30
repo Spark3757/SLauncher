@@ -10,8 +10,8 @@
 <?import javafx.scene.layout.*?>
 <?import ru.spark.slauncher.ui.construct.ComponentList?>
 <?import ru.spark.slauncher.ui.construct.FileItem?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane">
     <ScrollPane fx:id="scroll" fitToHeight="true" fitToWidth="true">
         <VBox fx:id="rootPane" style="-fx-padding: 20;">

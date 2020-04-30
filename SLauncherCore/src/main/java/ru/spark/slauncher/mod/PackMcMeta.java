@@ -6,7 +6,7 @@ import ru.spark.slauncher.util.Immutable;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.gson.Validation;
 import ru.spark.slauncher.util.io.CompressingUtils;
-import ru.spark.slauncher.util.io.IOUtils;
+import ru.spark.slauncher.util.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -26,16 +26,6 @@ public class PackMcMeta implements Validation {
 
     public PackMcMeta(PackInfo packInfo) {
         this.pack = packInfo;
-    }
-
-    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
-        try (FileSystem fs = CompressingUtils.createReadOnlyZipFileSystem(modFile.toPath())) {
-            Path mcmod = fs.getPath("pack.mcmeta");
-            if (Files.notExists(mcmod))
-                throw new IOException("File " + modFile + " is not a resource pack.");
-            PackMcMeta metadata = JsonUtils.fromNonNullJson(IOUtils.readFullyAsString(Files.newInputStream(mcmod)), PackMcMeta.class);
-            return new ModInfo(modManager, modFile, metadata.pack.description, "", "", "", "", "");
-        }
     }
 
     public PackInfo getPackInfo() {
@@ -70,6 +60,16 @@ public class PackMcMeta implements Validation {
 
         public String getDescription() {
             return description;
+        }
+    }
+
+    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
+        try (FileSystem fs = CompressingUtils.createReadOnlyZipFileSystem(modFile.toPath())) {
+            Path mcmod = fs.getPath("pack.mcmeta");
+            if (Files.notExists(mcmod))
+                throw new IOException("File " + modFile + " is not a resource pack.");
+            PackMcMeta metadata = JsonUtils.fromNonNullJson(FileUtils.readText(mcmod), PackMcMeta.class);
+            return new ModInfo(modManager, modFile, metadata.pack.description, "", "", "", "", "");
         }
     }
 }

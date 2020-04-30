@@ -1,13 +1,13 @@
 package ru.spark.slauncher.ui.versions;
 
-import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.Node;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
 import ru.spark.slauncher.event.EventBus;
 import ru.spark.slauncher.event.RefreshingVersionsEvent;
-import ru.spark.slauncher.game.SLauncherGameRepository;
+import ru.spark.slauncher.game.SLGameRepository;
 import ru.spark.slauncher.game.Version;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.setting.Profiles;
@@ -18,30 +18,30 @@ import ru.spark.slauncher.ui.download.VanillaInstallWizardProvider;
 import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.runInFX;
 
 public class GameList extends ListPageBase<GameListItem> implements DecoratorPage {
-    private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper(I18n.i18n("version.manage"));
+    private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(State.fromTitle(I18n.i18n("version.manage")));
 
     private ToggleGroup toggleGroup;
 
     public GameList() {
         EventBus.EVENT_BUS.channel(RefreshingVersionsEvent.class).register(event -> {
             if (event.getSource() == Profiles.getSelectedProfile().getRepository())
-                FXUtils.runInFX(() -> setLoading(true));
+                runInFX(() -> setLoading(true));
         });
 
         Profiles.registerVersionsListener(this::loadVersions);
     }
 
     private void loadVersions(Profile profile) {
-        SLauncherGameRepository repository = profile.getRepository();
+        SLGameRepository repository = profile.getRepository();
         toggleGroup = new ToggleGroup();
         WeakListenerHolder listenerHolder = new WeakListenerHolder();
         toggleGroup.getProperties().put("ReferenceHolder", listenerHolder);
@@ -51,20 +51,19 @@ public class GameList extends ListPageBase<GameListItem> implements DecoratorPag
                         .thenComparing(a -> VersionNumber.asVersion(a.getId())))
                 .map(version -> new GameListItem(toggleGroup, profile, version.getId()))
                 .collect(Collectors.toList());
-        FXUtils.runInFX(() -> {
+        runInFX(() -> {
             if (profile == Profiles.getSelectedProfile()) {
                 setLoading(false);
                 itemsProperty().setAll(children);
                 children.forEach(GameListItem::checkSelection);
 
                 profile.selectedVersionProperty().addListener(listenerHolder.weak((a, b, newValue) -> {
-                    Platform.runLater(() -> {
-                        children.forEach(it -> it.selectedProperty().set(false));
-                        children.stream()
-                                .filter(it -> it.getVersion().equals(newValue))
-                                .findFirst()
-                                .ifPresent(it -> it.selectedProperty().set(true));
-                    });
+                    FXUtils.checkFxUserThread();
+                    children.forEach(it -> it.selectedProperty().set(false));
+                    children.stream()
+                            .filter(it -> it.getVersion().equals(newValue))
+                            .findFirst()
+                            .ifPresent(it -> it.selectedProperty().set(true));
                 }));
             }
             toggleGroup.selectedToggleProperty().addListener((o, a, toggle) -> {
@@ -80,21 +79,21 @@ public class GameList extends ListPageBase<GameListItem> implements DecoratorPag
         return new GameListSkin();
     }
 
-    void addNewGame() {
+    public static void addNewGame() {
         Profile profile = Profiles.getSelectedProfile();
         if (profile.getRepository().isLoaded()) {
-            Controllers.getDecorator().startWizard(new VanillaInstallWizardProvider(profile), i18n("install.new_game"));
+            Controllers.getDecorator().startWizard(new VanillaInstallWizardProvider(profile), I18n.i18n("install.new_game"));
         }
     }
 
-    void importModpack() {
+    public static void importModpack() {
         Profile profile = Profiles.getSelectedProfile();
         if (profile.getRepository().isLoaded()) {
-            Controllers.getDecorator().startWizard(new ModpackInstallWizardProvider(profile), i18n("install.modpack"));
+            Controllers.getDecorator().startWizard(new ModpackInstallWizardProvider(profile), I18n.i18n("install.modpack"));
         }
     }
 
-    public void refresh() {
+    public static void refreshList() {
         Profiles.getSelectedProfile().getRepository().refreshVersionsAsync().start();
     }
 
@@ -103,24 +102,29 @@ public class GameList extends ListPageBase<GameListItem> implements DecoratorPag
     }
 
     @Override
-    public ReadOnlyStringProperty titleProperty() {
-        return title.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<State> stateProperty() {
+        return state.getReadOnlyProperty();
     }
 
     private class GameListSkin extends ToolbarListPageSkin<GameList> {
 
         public GameListSkin() {
             super(GameList.this);
+
+            HBox hbox = new HBox(
+                    createToolbarButton(I18n.i18n("install.new_game"), SVG::plus, GameList::addNewGame),
+                    createToolbarButton(I18n.i18n("install.modpack"), SVG::importIcon, GameList::importModpack),
+                    createToolbarButton(I18n.i18n("button.refresh"), SVG::refresh, GameList::refreshList),
+                    createToolbarButton(I18n.i18n("settings.type.global.manage"), SVG::gear, GameList.this::modifyGlobalGameSettings)
+            );
+            hbox.setPickOnBounds(false);
+
+            state.set(new State(I18n.i18n("version.manage"), hbox, true, false, true));
         }
 
         @Override
         protected List<Node> initializeToolbar(GameList skinnable) {
-            return Arrays.asList(
-                    createToolbarButton(i18n("install.new_game"), SVG::plus, skinnable::addNewGame),
-                    createToolbarButton(i18n("install.modpack"), SVG::importIcon, skinnable::importModpack),
-                    createToolbarButton(i18n("button.refresh"), SVG::refresh, skinnable::refresh),
-                    createToolbarButton(i18n("settings.type.global.manage"), SVG::gear, skinnable::modifyGlobalGameSettings)
-            );
+            return Collections.emptyList();
         }
     }
 }

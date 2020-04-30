@@ -20,7 +20,7 @@ import java.util.logging.Level;
 import static java.util.Collections.newSetFromMap;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class CrashReporter implements Thread.UncaughtExceptionHandler {
 

@@ -5,7 +5,7 @@ import ru.spark.slauncher.util.Immutable;
 import java.util.*;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class CompatibilityRule {
@@ -28,6 +28,18 @@ public final class CompatibilityRule {
         this.features = features;
     }
 
+    public Optional<Action> getAppliedAction(Map<String, Boolean> supportedFeatures) {
+        if (os != null && !os.allow())
+            return Optional.empty();
+
+        if (features != null)
+            for (Map.Entry<String, Boolean> entry : features.entrySet())
+                if (!Objects.equals(supportedFeatures.get(entry.getKey()), entry.getValue()))
+                    return Optional.empty();
+
+        return Optional.ofNullable(action);
+    }
+
     public static boolean appliesToCurrentEnvironment(Collection<CompatibilityRule> rules) {
         return appliesToCurrentEnvironment(rules, Collections.emptyMap());
     }
@@ -48,18 +60,6 @@ public final class CompatibilityRule {
 
     public static boolean equals(Collection<CompatibilityRule> rules1, Collection<CompatibilityRule> rules2) {
         return Objects.hashCode(rules1) == Objects.hashCode(rules2);
-    }
-
-    public Optional<Action> getAppliedAction(Map<String, Boolean> supportedFeatures) {
-        if (os != null && !os.allow())
-            return Optional.empty();
-
-        if (features != null)
-            for (Map.Entry<String, Boolean> entry : features.entrySet())
-                if (!Objects.equals(supportedFeatures.get(entry.getKey()), entry.getValue()))
-                    return Optional.empty();
-
-        return Optional.ofNullable(action);
     }
 
     @Override

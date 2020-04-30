@@ -10,7 +10,7 @@ import com.google.gson.stream.JsonWriter;
 import java.io.IOException;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ValidationTypeAdapterFactory implements TypeAdapterFactory {
 

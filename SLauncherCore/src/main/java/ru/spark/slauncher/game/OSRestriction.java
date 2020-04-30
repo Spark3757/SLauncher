@@ -6,7 +6,7 @@ import ru.spark.slauncher.util.platform.OperatingSystem;
 import java.util.regex.Pattern;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class OSRestriction {
 

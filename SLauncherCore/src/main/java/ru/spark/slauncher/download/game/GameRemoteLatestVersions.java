@@ -4,7 +4,7 @@ import com.google.gson.annotations.SerializedName;
 import ru.spark.slauncher.util.Immutable;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class GameRemoteLatestVersions {

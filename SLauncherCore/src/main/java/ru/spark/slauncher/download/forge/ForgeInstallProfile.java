@@ -7,7 +7,7 @@ import ru.spark.slauncher.util.Immutable;
 import ru.spark.slauncher.util.gson.Validation;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class ForgeInstallProfile implements Validation {

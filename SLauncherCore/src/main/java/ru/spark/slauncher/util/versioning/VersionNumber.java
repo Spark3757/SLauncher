@@ -13,15 +13,6 @@ import java.util.*;
  */
 public class VersionNumber implements Comparable<VersionNumber> {
 
-    public static Comparator<String> VERSION_COMPARATOR = Comparator.comparing(VersionNumber::asVersion);
-    private String value;
-    private String canonical;
-    private ListItem items;
-
-    public VersionNumber(String version) {
-        parseVersion(version);
-    }
-
     public static VersionNumber asVersion(String version) {
         Objects.requireNonNull(version);
         return new VersionNumber(version);
@@ -45,100 +36,9 @@ public class VersionNumber implements Comparable<VersionNumber> {
         }
     }
 
-    private static Item parseItem(String buf) {
-        return buf.chars().allMatch(Character::isDigit) ? new IntegerItem(buf) : new StringItem(buf);
-    }
-
-    private void parseVersion(String version) {
-        this.value = version;
-
-        ListItem list = items = new ListItem();
-
-        Stack<Item> stack = new Stack<>();
-        stack.push(list);
-
-        boolean isDigit = false;
-
-        int startIndex = 0;
-
-        for (int i = 0; i < version.length(); i++) {
-            char c = version.charAt(i);
-
-            if (c == '.') {
-                if (i == startIndex) {
-                    list.add(IntegerItem.ZERO);
-                } else {
-                    list.add(parseItem(version.substring(startIndex, i)));
-                }
-                startIndex = i + 1;
-            } else if ("!\"#$%&'()*+,-/:;<=>?@[\\]^_`{|}~".indexOf(c) != -1) {
-                if (i == startIndex) {
-                    list.add(IntegerItem.ZERO);
-                } else {
-                    list.add(parseItem(version.substring(startIndex, i)));
-                }
-                startIndex = i + 1;
-
-                list.add(list = new ListItem(c));
-                stack.push(list);
-            } else if (Character.isDigit(c)) {
-                if (!isDigit && i > startIndex) {
-                    list.add(parseItem(version.substring(startIndex, i)));
-                    startIndex = i;
-
-                    list.add(list = new ListItem());
-                    stack.push(list);
-                }
-
-                isDigit = true;
-            } else {
-                if (isDigit && i > startIndex) {
-                    list.add(parseItem(version.substring(startIndex, i)));
-                    startIndex = i;
-
-                    list.add(list = new ListItem());
-                    stack.push(list);
-                }
-
-                isDigit = false;
-            }
-        }
-
-        if (version.length() > startIndex) {
-            list.add(parseItem(version.substring(startIndex)));
-        }
-
-        while (!stack.isEmpty()) {
-            list = (ListItem) stack.pop();
-            list.normalize();
-        }
-
-        canonical = items.toString();
-    }
-
-    @Override
-    public int compareTo(VersionNumber o) {
-        return items.compareTo(o.items);
-    }
-
-    @Override
-    public String toString() {
-        return value;
-    }
-
-    public String getCanonical() {
-        return canonical;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return o instanceof VersionNumber && canonical.equals(((VersionNumber) o).canonical);
-    }
-
-    @Override
-    public int hashCode() {
-        return canonical.hashCode();
-    }
+    private String value;
+    private String canonical;
+    private ListItem items;
 
     private interface Item {
         int INTEGER_ITEM = 0;
@@ -157,8 +57,9 @@ public class VersionNumber implements Comparable<VersionNumber> {
      */
     private static class IntegerItem
             implements Item {
-        public static final IntegerItem ZERO = new IntegerItem();
         private final BigInteger value;
+
+        public static final IntegerItem ZERO = new IntegerItem();
 
         private IntegerItem() {
             this.value = BigInteger.ZERO;
@@ -335,4 +236,105 @@ public class VersionNumber implements Comparable<VersionNumber> {
                 return buffer.toString();
         }
     }
+
+    public VersionNumber(String version) {
+        parseVersion(version);
+    }
+
+    private void parseVersion(String version) {
+        this.value = version;
+
+        ListItem list = items = new ListItem();
+
+        Stack<Item> stack = new Stack<>();
+        stack.push(list);
+
+        boolean isDigit = false;
+
+        int startIndex = 0;
+
+        for (int i = 0; i < version.length(); i++) {
+            char c = version.charAt(i);
+
+            if (c == '.') {
+                if (i == startIndex) {
+                    list.add(IntegerItem.ZERO);
+                } else {
+                    list.add(parseItem(version.substring(startIndex, i)));
+                }
+                startIndex = i + 1;
+            } else if ("!\"#$%&'()*+,-/:;<=>?@[\\]^_`{|}~".indexOf(c) != -1) {
+                if (i == startIndex) {
+                    list.add(IntegerItem.ZERO);
+                } else {
+                    list.add(parseItem(version.substring(startIndex, i)));
+                }
+                startIndex = i + 1;
+
+                list.add(list = new ListItem(c));
+                stack.push(list);
+            } else if (Character.isDigit(c)) {
+                if (!isDigit && i > startIndex) {
+                    list.add(parseItem(version.substring(startIndex, i)));
+                    startIndex = i;
+
+                    list.add(list = new ListItem());
+                    stack.push(list);
+                }
+
+                isDigit = true;
+            } else {
+                if (isDigit && i > startIndex) {
+                    list.add(parseItem(version.substring(startIndex, i)));
+                    startIndex = i;
+
+                    list.add(list = new ListItem());
+                    stack.push(list);
+                }
+
+                isDigit = false;
+            }
+        }
+
+        if (version.length() > startIndex) {
+            list.add(parseItem(version.substring(startIndex)));
+        }
+
+        while (!stack.isEmpty()) {
+            list = (ListItem) stack.pop();
+            list.normalize();
+        }
+
+        canonical = items.toString();
+    }
+
+    private static Item parseItem(String buf) {
+        return buf.chars().allMatch(Character::isDigit) ? new IntegerItem(buf) : new StringItem(buf);
+    }
+
+    @Override
+    public int compareTo(VersionNumber o) {
+        return items.compareTo(o.items);
+    }
+
+    @Override
+    public String toString() {
+        return value;
+    }
+
+    public String getCanonical() {
+        return canonical;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof VersionNumber && canonical.equals(((VersionNumber) o).canonical);
+    }
+
+    @Override
+    public int hashCode() {
+        return canonical.hashCode();
+    }
+
+    public static Comparator<String> VERSION_COMPARATOR = Comparator.comparing(VersionNumber::asVersion);
 }

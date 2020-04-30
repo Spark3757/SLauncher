@@ -12,21 +12,6 @@ import java.util.function.Predicate;
 
 public final class Validator extends ValidatorBase {
 
-    private final Predicate<String> validator;
-
-    /**
-     * @param validator return true if the input string is valid.
-     */
-    public Validator(Predicate<String> validator) {
-        this.validator = validator;
-    }
-
-    public Validator(String message, Predicate<String> validator) {
-        this(validator);
-
-        setMessage(message);
-    }
-
     public static Consumer<Predicate<String>> addTo(JFXTextField control) {
         return addTo(control, null);
     }
@@ -42,6 +27,21 @@ public final class Validator extends ValidatorBase {
             control.textProperty().addListener(new WeakInvalidationListener(listener));
             control.getValidators().add(validator);
         };
+    }
+
+    private final Predicate<String> validator;
+
+    /**
+     * @param validator return true if the input string is valid.
+     */
+    public Validator(Predicate<String> validator) {
+        this.validator = validator;
+    }
+
+    public Validator(String message, Predicate<String> validator) {
+        this(validator);
+
+        setMessage(message);
     }
 
     @Override

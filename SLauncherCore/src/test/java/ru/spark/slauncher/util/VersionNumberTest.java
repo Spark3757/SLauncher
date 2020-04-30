@@ -69,7 +69,7 @@ public class VersionNumberTest {
                 "1.10.2-forge2511-simple_life_2",
                 "1.10.2-forge2511_bxztest",
                 "1.10.2-forge2511_Farming_Valley",
-                "1.10.2-forge2511简单生活BXZ",
+                "1.10.2-forge2511中文",
                 "1.10.2-FTB_Beyond",
                 "1.10.2-LiteLoader1.10.2",
                 "1.12.2",

@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class LibrariesDownloadInfo {
@@ -16,7 +16,7 @@ public final class LibrariesDownloadInfo {
     private final Map<String, LibraryDownloadInfo> classifiers;
 
     public LibrariesDownloadInfo(LibraryDownloadInfo artifact) {
-        this(artifact, Collections.emptyMap());
+        this(artifact, null);
     }
 
     public LibrariesDownloadInfo(LibraryDownloadInfo artifact, Map<String, LibraryDownloadInfo> classifiers) {

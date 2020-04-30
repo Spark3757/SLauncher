@@ -3,7 +3,7 @@ package ru.spark.slauncher.auth;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class AccountFactory<T extends Account> {
 

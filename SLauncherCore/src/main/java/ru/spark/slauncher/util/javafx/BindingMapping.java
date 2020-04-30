@@ -5,7 +5,6 @@ import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ObjectBinding;
 import javafx.beans.value.ObservableValue;
-import ru.spark.slauncher.util.Lang;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -13,20 +12,13 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
+import static ru.spark.slauncher.util.Lang.handleUncaughtException;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class BindingMapping<T, U> extends ObjectBinding<U> {
 
-    protected final ObservableValue<T> predecessor;
-
-    public BindingMapping(ObservableValue<T> predecessor) {
-        this.predecessor = requireNonNull(predecessor);
-        bind(predecessor);
-    }
-
-    @SuppressWarnings("unchecked")
     public static <T> BindingMapping<?, T> of(ObservableValue<T> property) {
         if (property instanceof BindingMapping) {
             return (BindingMapping<?, T>) property;
@@ -36,6 +28,13 @@ public abstract class BindingMapping<T, U> extends ObjectBinding<U> {
 
     public static <S extends Observable, T> BindingMapping<?, T> of(S watched, Function<S, T> mapper) {
         return of(Bindings.createObjectBinding(() -> mapper.apply(watched), watched));
+    }
+
+    protected final ObservableValue<T> predecessor;
+
+    public BindingMapping(ObservableValue<T> predecessor) {
+        this.predecessor = requireNonNull(predecessor);
+        bind(predecessor);
     }
 
     public <V> BindingMapping<?, V> map(Function<U, V> mapper) {
@@ -128,10 +127,11 @@ public abstract class BindingMapping<T, U> extends ObjectBinding<U> {
 
     private static class AsyncMappedBinding<T, U> extends BindingMapping<T, U> {
 
-        private final Function<T, CompletableFuture<U>> mapper;
         private boolean initialized = false;
         private T prev;
         private U value;
+
+        private final Function<T, CompletableFuture<U>> mapper;
         private T computingPrev;
         private boolean computing = false;
 
@@ -164,7 +164,7 @@ public abstract class BindingMapping<T, U> extends ObjectBinding<U> {
                     valueUpdate(currentPrev, result);
                     Platform.runLater(this::invalidate);
                 } else {
-                    Lang.handleUncaughtException(e);
+                    handleUncaughtException(e);
                     valueUpdateFailed(currentPrev);
                 }
                 return null;

@@ -17,7 +17,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class ForgeModMetadata {
@@ -51,30 +51,6 @@ public final class ForgeModMetadata {
         this.credits = credits;
         this.authorList = authorList;
         this.authors = authors;
-    }
-
-    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
-        try (FileSystem fs = CompressingUtils.createReadOnlyZipFileSystem(modFile.toPath())) {
-            Path mcmod = fs.getPath("mcmod.info");
-            if (Files.notExists(mcmod))
-                throw new IOException("File " + modFile + " is not a Forge mod.");
-            List<ForgeModMetadata> modList = JsonUtils.GSON.fromJson(FileUtils.readText(mcmod),
-                    new TypeToken<List<ForgeModMetadata>>() {
-                    }.getType());
-            if (modList == null || modList.isEmpty())
-                throw new IOException("Mod " + modFile + " `mcmod.info` is malformed..");
-            ForgeModMetadata metadata = modList.get(0);
-            String authors = metadata.getAuthor();
-            if (StringUtils.isBlank(authors) && metadata.getAuthors().length > 0)
-                authors = String.join(", ", metadata.getAuthors());
-            if (StringUtils.isBlank(authors) && metadata.getAuthorList().length > 0)
-                authors = String.join(", ", metadata.getAuthorList());
-            if (StringUtils.isBlank(authors))
-                authors = metadata.getCredits();
-            return new ModInfo(modManager, modFile, metadata.getName(), metadata.getDescription(),
-                    authors, metadata.getVersion(), metadata.getGameVersion(),
-                    StringUtils.isBlank(metadata.getUrl()) ? metadata.getUpdateUrl() : metadata.url);
-        }
     }
 
     public String getModId() {
@@ -119,5 +95,29 @@ public final class ForgeModMetadata {
 
     public String[] getAuthors() {
         return authors;
+    }
+
+    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
+        try (FileSystem fs = CompressingUtils.createReadOnlyZipFileSystem(modFile.toPath())) {
+            Path mcmod = fs.getPath("mcmod.info");
+            if (Files.notExists(mcmod))
+                throw new IOException("File " + modFile + " is not a Forge mod.");
+            List<ForgeModMetadata> modList = JsonUtils.GSON.fromJson(FileUtils.readText(mcmod),
+                    new TypeToken<List<ForgeModMetadata>>() {
+                    }.getType());
+            if (modList == null || modList.isEmpty())
+                throw new IOException("Mod " + modFile + " `mcmod.info` is malformed..");
+            ForgeModMetadata metadata = modList.get(0);
+            String authors = metadata.getAuthor();
+            if (StringUtils.isBlank(authors) && metadata.getAuthors().length > 0)
+                authors = String.join(", ", metadata.getAuthors());
+            if (StringUtils.isBlank(authors) && metadata.getAuthorList().length > 0)
+                authors = String.join(", ", metadata.getAuthorList());
+            if (StringUtils.isBlank(authors))
+                authors = metadata.getCredits();
+            return new ModInfo(modManager, modFile, metadata.getName(), metadata.getDescription(),
+                    authors, metadata.getVersion(), metadata.getGameVersion(),
+                    StringUtils.isBlank(metadata.getUrl()) ? metadata.getUpdateUrl() : metadata.url);
+        }
     }
 }

@@ -1,6 +1,6 @@
 package ru.spark.slauncher.game;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import ru.spark.slauncher.util.i18n.I18n;
 
 public enum LoadingState {
     DEPENDENCIES("launch.state.dependencies"),
@@ -16,6 +16,6 @@ public enum LoadingState {
     }
 
     public String getLocalizedMessage() {
-        return i18n(key);
+        return I18n.i18n(key);
     }
 }

@@ -8,12 +8,20 @@ import javafx.scene.layout.StackPane;
 import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.util.Optional;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
 public final class MessageDialogPane extends StackPane {
+
+    public enum MessageType {
+        ERROR,
+        INFORMATION,
+        WARNING,
+        QUESTION,
+        FINE,
+        PLAIN,
+    }
 
     @FXML
     private JFXButton acceptButton;
@@ -72,18 +80,9 @@ public final class MessageDialogPane extends StackPane {
             Optional.ofNullable(onCancel).ifPresent(Runnable::run);
         });
 
-        acceptButton.setText(i18n("button.yes"));
-        cancelButton.setText(i18n("button.no"));
+        acceptButton.setText(I18n.i18n("button.yes"));
+        cancelButton.setText(I18n.i18n("button.no"));
 
         actions.getChildren().add(cancelButton);
-    }
-
-    public enum MessageType {
-        ERROR,
-        INFORMATION,
-        WARNING,
-        QUESTION,
-        FINE,
-        PLAIN,
     }
 }

@@ -2,7 +2,7 @@ package ru.spark.slauncher.setting;
 
 import javafx.beans.binding.Bindings;
 import ru.spark.slauncher.Metadata;
-import ru.spark.slauncher.game.SLauncherCacheRepository;
+import ru.spark.slauncher.game.SLCacheRepository;
 import ru.spark.slauncher.util.CacheRepository;
 import ru.spark.slauncher.util.io.FileUtils;
 
@@ -15,9 +15,10 @@ public class Settings {
         ProxyManager.init();
         Accounts.init();
         Profiles.init();
+        AuthlibInjectorServers.init();
 
-        CacheRepository.setInstance(SLauncherCacheRepository.REPOSITORY);
-        SLauncherCacheRepository.REPOSITORY.directoryProperty().bind(Bindings.createStringBinding(() -> {
+        CacheRepository.setInstance(SLCacheRepository.REPOSITORY);
+        SLCacheRepository.REPOSITORY.directoryProperty().bind(Bindings.createStringBinding(() -> {
             if (FileUtils.canCreateDirectory(getCommonDirectory())) {
                 return getCommonDirectory();
             } else {

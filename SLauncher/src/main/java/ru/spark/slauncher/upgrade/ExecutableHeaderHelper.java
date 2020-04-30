@@ -20,7 +20,7 @@ import static java.nio.file.StandardOpenOption.*;
 /**
  * Helper class for adding/removing executable header from SLauncher file.
  *
- * @author Spark1337
+ * @author spark1337
  */
 final class ExecutableHeaderHelper {
     private static Map<String, String> suffix2header = Lang.mapOf(

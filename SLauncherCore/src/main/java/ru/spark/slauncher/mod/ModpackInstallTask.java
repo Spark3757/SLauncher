@@ -1,6 +1,8 @@
 package ru.spark.slauncher.mod;
 
 import ru.spark.slauncher.task.Task;
+import ru.spark.slauncher.util.DigestUtils;
+import ru.spark.slauncher.util.Hex;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.io.Unzipper;
 
@@ -11,10 +13,7 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Predicate;
 
-import static ru.spark.slauncher.util.DigestUtils.digest;
-import static ru.spark.slauncher.util.Hex.encodeHex;
-
-public class ModpackInstallTask<T> extends Task {
+public class ModpackInstallTask<T> extends Task<Void> {
 
     private final File modpackFile;
     private final File dest;
@@ -23,6 +22,16 @@ public class ModpackInstallTask<T> extends Task {
     private final List<ModpackConfiguration.FileInformation> overrides;
     private final Predicate<String> callback;
 
+    /**
+     * Constructor
+     *
+     * @param modpackFile      a zip file
+     * @param dest             destination to store unpacked files
+     * @param charset          charset of the zip file
+     * @param subDirectory     the subdirectory of zip file to unpack
+     * @param callback         test whether the file (given full path) in zip file should be unpacked or not
+     * @param oldConfiguration old modpack information if upgrade
+     */
     public ModpackInstallTask(File modpackFile, File dest, Charset charset, String subDirectory, Predicate<String> callback, ModpackConfiguration<T> oldConfiguration) {
         this.modpackFile = modpackFile;
         this.dest = dest;
@@ -63,8 +72,9 @@ public class ModpackInstallTask<T> extends Task {
                         // If both old and new modpacks have this entry, but the file is deleted by user, leave it missing.
                         return false;
                     } else {
-                        // If user modified this entry file, we will not replace this file since this modified file is that user expects.
-                        String fileHash = encodeHex(digest("SHA-1", Files.newInputStream(destPath)));
+                        // If both old and new modpacks have this entry, and user has modified this file,
+                        // we will not replace it since this modified file is what user expects.
+                        String fileHash = Hex.encodeHex(DigestUtils.digest("SHA-1", destPath));
                         String oldHash = files.get(entryPath).getHash();
                         return Objects.equals(oldHash, fileHash);
                     }

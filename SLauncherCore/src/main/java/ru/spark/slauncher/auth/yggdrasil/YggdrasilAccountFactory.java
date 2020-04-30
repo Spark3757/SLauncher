@@ -3,16 +3,15 @@ package ru.spark.slauncher.auth.yggdrasil;
 import ru.spark.slauncher.auth.AccountFactory;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.CharacterSelector;
+import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.javafx.ObservableOptionalCache;
 
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
-import static ru.spark.slauncher.util.Lang.tryCast;
-
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class YggdrasilAccountFactory extends AccountFactory<YggdrasilAccount> {
 
@@ -39,10 +38,10 @@ public class YggdrasilAccountFactory extends AccountFactory<YggdrasilAccount> {
 
         YggdrasilSession session = YggdrasilSession.fromStorage(storage);
 
-        String username = tryCast(storage.get("username"), String.class)
+        String username = Lang.tryCast(storage.get("username"), String.class)
                 .orElseThrow(() -> new IllegalArgumentException("storage does not have username"));
 
-        tryCast(storage.get("profileProperties"), Map.class).ifPresent(
+        Lang.tryCast(storage.get("profileProperties"), Map.class).ifPresent(
                 it -> {
                     @SuppressWarnings("unchecked")
                     Map<String, String> properties = it;

@@ -11,11 +11,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class Account implements Observable {
-
-    private ObservableHelper helper = new ObservableHelper(this);
 
     /**
      * @return the name of the account who owns the character
@@ -55,6 +53,8 @@ public abstract class Account implements Observable {
 
     public void clearCache() {
     }
+
+    private ObservableHelper helper = new ObservableHelper(this);
 
     @Override
     public void addListener(InvalidationListener listener) {

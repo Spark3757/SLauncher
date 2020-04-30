@@ -7,7 +7,7 @@ import ru.spark.slauncher.util.gson.TolerableValidationException;
 import ru.spark.slauncher.util.gson.Validation;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class LoggingInfo implements Validation {
 

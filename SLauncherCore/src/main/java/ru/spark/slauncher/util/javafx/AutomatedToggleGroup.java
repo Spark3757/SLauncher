@@ -6,7 +6,7 @@ import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class AutomatedToggleGroup extends ToggleGroup {
 

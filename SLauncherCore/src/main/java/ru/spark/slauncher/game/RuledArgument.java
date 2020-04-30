@@ -6,14 +6,11 @@ import com.google.gson.reflect.TypeToken;
 import ru.spark.slauncher.util.Immutable;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @JsonAdapter(RuledArgument.Serializer.class)
 @Immutable
@@ -51,6 +48,7 @@ public class RuledArgument implements Argument {
     public List<String> toString(Map<String, String> keys, Map<String, Boolean> features) {
         if (CompatibilityRule.appliesToCurrentEnvironment(rules, features) && value != null)
             return value.stream()
+                    .filter(Objects::nonNull)
                     .map(StringArgument::new)
                     .map(str -> str.toString(keys, features).get(0))
                     .collect(Collectors.toList());

@@ -4,8 +4,8 @@ import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXCheckBox;
 import com.jfoenix.controls.JFXTextField;
 import com.jfoenix.validation.base.ValidatorBase;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.fxml.FXML;
@@ -17,14 +17,13 @@ import ru.spark.slauncher.ui.construct.FileItem;
 import ru.spark.slauncher.ui.construct.PageCloseEvent;
 import ru.spark.slauncher.ui.decorator.DecoratorPage;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.io.File;
 import java.util.Optional;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
 public final class ProfilePage extends StackPane implements DecoratorPage {
-    private final ReadOnlyStringWrapper title;
+    private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>();
     private final StringProperty location;
     private final Profile profile;
 
@@ -44,8 +43,7 @@ public final class ProfilePage extends StackPane implements DecoratorPage {
         this.profile = profile;
         String profileDisplayName = Optional.ofNullable(profile).map(Profiles::getProfileDisplayName).orElse("");
 
-        title = new ReadOnlyStringWrapper(this, "title",
-                profile == null ? i18n("profile.new") : i18n("profile") + " - " + profileDisplayName);
+        state.set(State.fromTitle(profile == null ? I18n.i18n("profile.new") : I18n.i18n("profile") + " - " + profileDisplayName));
         location = new SimpleStringProperty(this, "location",
                 Optional.ofNullable(profile).map(Profile::getGameDir).map(File::getAbsolutePath).orElse(".minecraft"));
 
@@ -54,7 +52,7 @@ public final class ProfilePage extends StackPane implements DecoratorPage {
         txtProfileName.setText(profileDisplayName);
         txtProfileName.getValidators().add(new ValidatorBase() {
             {
-                setMessage(i18n("profile.already_exists"));
+                setMessage(I18n.i18n("profile.already_exists"));
             }
 
             @Override
@@ -99,28 +97,20 @@ public final class ProfilePage extends StackPane implements DecoratorPage {
         fireEvent(new PageCloseEvent());
     }
 
-    public String getTitle() {
-        return title.get();
-    }
-
-    public void setTitle(String title) {
-        this.title.set(title);
-    }
-
     @Override
-    public ReadOnlyStringProperty titleProperty() {
-        return title.getReadOnlyProperty();
+    public ReadOnlyObjectProperty<State> stateProperty() {
+        return state.getReadOnlyProperty();
     }
 
     public String getLocation() {
         return location.get();
     }
 
-    public void setLocation(String location) {
-        this.location.set(location);
-    }
-
     public StringProperty locationProperty() {
         return location;
+    }
+
+    public void setLocation(String location) {
+        this.location.set(location);
     }
 }

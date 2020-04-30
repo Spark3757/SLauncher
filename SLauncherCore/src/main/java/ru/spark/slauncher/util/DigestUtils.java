@@ -10,14 +10,14 @@ import java.security.NoSuchAlgorithmException;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class DigestUtils {
 
-    private static final int STREAM_BUFFER_LENGTH = 1024;
-
     private DigestUtils() {
     }
+
+    private static final int STREAM_BUFFER_LENGTH = 1024;
 
     public static MessageDigest getDigest(String algorithm) {
         try {

@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * The remote version list.
  *
  * @param <T> The subclass of {@code RemoteVersion}, the type of RemoteVersion.
- * @author Spark1337
+ * @author spark1337
  */
 public abstract class VersionList<T extends RemoteVersion> {
 
@@ -20,7 +20,6 @@ public abstract class VersionList<T extends RemoteVersion> {
      * values: corresponding remote versions.
      */
     protected final SimpleMultimap<String, T> versions = new SimpleMultimap<String, T>(HashMap::new, TreeSet::new);
-    protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
      * True if the version list has been loaded.
@@ -40,23 +39,23 @@ public abstract class VersionList<T extends RemoteVersion> {
 
     public abstract boolean hasType();
 
-    /**
-     * @param downloadProvider DownloadProvider
-     * @return the task to reload the remote version list.
-     */
-    public abstract Task refreshAsync(DownloadProvider downloadProvider);
+    protected final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
-     * @param gameVersion      the remote version depends on
-     * @param downloadProvider DownloadProvider
      * @return the task to reload the remote version list.
      */
-    public Task refreshAsync(String gameVersion, DownloadProvider downloadProvider) {
-        return refreshAsync(downloadProvider);
+    public abstract Task<?> refreshAsync();
+
+    /**
+     * @param gameVersion the remote version depends on
+     * @return the task to reload the remote version list.
+     */
+    public Task<?> refreshAsync(String gameVersion) {
+        return refreshAsync();
     }
 
-    public Task loadAsync(DownloadProvider downloadProvider) {
-        return Task.ofThen(() -> {
+    public Task<?> loadAsync() {
+        return Task.composeAsync(() -> {
             lock.readLock().lock();
             boolean loaded;
 
@@ -65,12 +64,12 @@ public abstract class VersionList<T extends RemoteVersion> {
             } finally {
                 lock.readLock().unlock();
             }
-            return loaded ? null : refreshAsync(downloadProvider);
+            return loaded ? null : refreshAsync();
         });
     }
 
-    public Task loadAsync(String gameVersion, DownloadProvider downloadProvider) {
-        return Task.ofThen(() -> {
+    public Task<?> loadAsync(String gameVersion) {
+        return Task.composeAsync(() -> {
             lock.readLock().lock();
             boolean loaded;
 
@@ -79,17 +78,12 @@ public abstract class VersionList<T extends RemoteVersion> {
             } finally {
                 lock.readLock().unlock();
             }
-            return loaded ? null : refreshAsync(gameVersion, downloadProvider);
+            return loaded ? null : refreshAsync(gameVersion);
         });
     }
 
     protected Collection<T> getVersionsImpl(String gameVersion) {
-        lock.readLock().lock();
-        try {
-            return versions.get(gameVersion);
-        } finally {
-            lock.readLock().unlock();
-        }
+        return versions.get(gameVersion);
     }
 
     /**
@@ -99,7 +93,12 @@ public abstract class VersionList<T extends RemoteVersion> {
      * @return the collection of specific remote versions
      */
     public final Collection<T> getVersions(String gameVersion) {
-        return Collections.unmodifiableCollection(getVersionsImpl(gameVersion));
+        lock.readLock().lock();
+        try {
+            return Collections.unmodifiableCollection(new ArrayList<>(getVersionsImpl(gameVersion)));
+        } finally {
+            lock.readLock().unlock();
+        }
     }
 
     /**
@@ -109,7 +108,7 @@ public abstract class VersionList<T extends RemoteVersion> {
      * @param remoteVersion the version of the remote version.
      * @return the specific remote version, null if it is not found.
      */
-    public final Optional<T> getVersion(String gameVersion, String remoteVersion) {
+    public Optional<T> getVersion(String gameVersion, String remoteVersion) {
         lock.readLock().lock();
         try {
             T result = null;

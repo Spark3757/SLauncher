@@ -5,7 +5,7 @@ import com.jfoenix.controls.JFXTextArea;
 import javafx.scene.Node;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class Summary {
     private final Node component;

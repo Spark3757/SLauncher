@@ -10,7 +10,7 @@ import ru.spark.slauncher.util.gson.Validation;
 import java.util.Date;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class GameRemoteVersionInfo implements Validation {
 

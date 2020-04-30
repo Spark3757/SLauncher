@@ -1,7 +1,7 @@
 package ru.spark.slauncher.event;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public enum EventPriority {
     HIGHEST,

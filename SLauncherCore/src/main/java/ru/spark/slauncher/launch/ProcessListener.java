@@ -4,7 +4,7 @@ import ru.spark.slauncher.util.Log4jLevel;
 import ru.spark.slauncher.util.platform.ManagedProcess;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public interface ProcessListener {
 

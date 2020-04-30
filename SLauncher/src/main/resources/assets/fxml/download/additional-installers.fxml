@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import com.jfoenix.controls.JFXButton?>
+<?import com.jfoenix.controls.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane" style="-fx-padding: 16;">
     <BorderPane>
         <top>
@@ -15,6 +15,18 @@
         </top>
         <center>
             <VBox fx:id="list" styleClass="jfx-list-view" maxHeight="150" maxWidth="300">
+                <JFXButton fx:id="btnFabric" prefWidth="${list.width}">
+                    <graphic>
+                        <BorderPane mouseTransparent="true">
+                            <left>
+                                <Label fx:id="lblFabric"/>
+                            </left>
+                            <right>
+                                <fx:include source="/assets/svg/arrow-right.fxml"/>
+                            </right>
+                        </BorderPane>
+                    </graphic>
+                </JFXButton>
                 <JFXButton fx:id="btnForge" prefWidth="${list.width}">
                     <graphic>
                         <BorderPane mouseTransparent="true">

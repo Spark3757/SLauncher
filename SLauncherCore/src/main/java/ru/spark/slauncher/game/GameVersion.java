@@ -6,6 +6,7 @@ import org.jenkinsci.constant_pool_scanner.ConstantPool;
 import org.jenkinsci.constant_pool_scanner.ConstantPoolScanner;
 import org.jenkinsci.constant_pool_scanner.ConstantType;
 import org.jenkinsci.constant_pool_scanner.StringConstant;
+import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.CompressingUtils;
 import ru.spark.slauncher.util.io.FileUtils;
@@ -21,10 +22,8 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-import static ru.spark.slauncher.util.Logging.LOG;
-
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class GameVersion {
     private static Optional<String> getVersionFromJson(Path versionJson) {
@@ -32,7 +31,7 @@ public final class GameVersion {
             MinecraftVersion version = JsonUtils.fromNonNullJson(FileUtils.readText(versionJson), MinecraftVersion.class);
             return Optional.ofNullable(version.name);
         } catch (IOException | JsonParseException e) {
-            LOG.log(Level.WARNING, "Failed to parse version.json", e);
+            Logging.LOG.log(Level.WARNING, "Failed to parse version.json", e);
             return Optional.empty();
         }
     }

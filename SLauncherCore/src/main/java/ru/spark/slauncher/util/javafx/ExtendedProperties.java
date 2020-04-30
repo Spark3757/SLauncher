@@ -16,7 +16,7 @@ import java.util.function.Function;
 import static ru.spark.slauncher.util.Pair.pair;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class ExtendedProperties {
 
@@ -56,7 +56,13 @@ public final class ExtendedProperties {
         return selectedItemPropertyFor(new AutomatedToggleGroup(items), userdataType);
     }
 
-    private ExtendedProperties() {
+    @SuppressWarnings("unchecked")
+    public static <T> ObjectProperty<T> selectedItemPropertyFor(ToggleGroup toggleGroup, Class<T> userdataType) {
+        return (ObjectProperty<T>) toggleGroup.getProperties().computeIfAbsent(
+                pair(PROP_PREFIX + ".toggleGroup.selectedItem", userdataType),
+                any -> createMappedPropertyForToggleGroup(
+                        toggleGroup,
+                        toggle -> toggle == null ? null : userdataType.cast(toggle.getUserData())));
     }
 
     private static <T> ObjectProperty<T> createMappedPropertyForToggleGroup(ToggleGroup toggleGroup, Function<Toggle, T> mapper) {
@@ -99,20 +105,14 @@ public final class ExtendedProperties {
 
     // ==== CheckBox ====
     @SuppressWarnings("unchecked")
-    public static ObjectProperty<Boolean> reservedSelectedPropertyFor(CheckBox checkbox) {
+    public static ObjectProperty<Boolean> reversedSelectedPropertyFor(CheckBox checkbox) {
         return (ObjectProperty<Boolean>) checkbox.getProperties().computeIfAbsent(
                 PROP_PREFIX + ".checkbox.reservedSelected",
-                any -> new MappedProperty<>(checkbox, "ext.reservedSelected",
-                        checkbox.selectedProperty(), it -> !(boolean) it, it -> !(boolean) it));
+                any -> new MappedProperty<Boolean, Boolean>(checkbox, "ext.reservedSelected",
+                        checkbox.selectedProperty(), it -> !it, it -> !it));
     }
     // ====
 
-    @SuppressWarnings("unchecked")
-    public static <T> ObjectProperty<T> selectedItemPropertyFor(ToggleGroup toggleGroup, Class<T> userdataType) {
-        return (ObjectProperty<T>) toggleGroup.getProperties().computeIfAbsent(
-                pair(PROP_PREFIX + ".toggleGroup.selectedItem", userdataType),
-                any -> createMappedPropertyForToggleGroup(
-                        toggleGroup,
-                        toggle -> toggle == null ? null : userdataType.cast(toggle.getUserData())));
+    private ExtendedProperties() {
     }
 }

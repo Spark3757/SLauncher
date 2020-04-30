@@ -1,6 +1,5 @@
 package ru.spark.slauncher.auth;
 
-import ru.spark.slauncher.auth.ely.ElyService;
 import ru.spark.slauncher.auth.yggdrasil.GameProfile;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilService;
 
@@ -20,14 +19,5 @@ public interface CharacterSelector {
      * @throws NoSelectedCharacterException if cannot select any character may because user close the selection window or cancel the selection.
      */
     GameProfile select(YggdrasilService yggdrasilService, List<GameProfile> names) throws NoSelectedCharacterException;
-
-    /**
-     * Select one of {@code names} GameProfiles to login.
-     *
-     * @param names available game profiles.
-     * @return your choice of game profile.
-     * @throws NoSelectedCharacterException if cannot select any character may because user close the selection window or cancel the selection.
-     */
-    ru.spark.slauncher.auth.ely.GameProfile select(ElyService elyService, List<ru.spark.slauncher.auth.ely.GameProfile> names) throws NoSelectedCharacterException;
 
 }

@@ -17,21 +17,27 @@ public final class Locales {
     /**
      * English
      */
-    public static final SupportedLocale RU = new SupportedLocale(Locale.forLanguageTag("ru"));
+    public static final SupportedLocale EN = new SupportedLocale(Locale.ROOT);
+
+    /**
+     * Spanish
+     */
+    public static final SupportedLocale ES = new SupportedLocale(new Locale("es"));
 
     /**
      * Russian
      */
-    public static final SupportedLocale EN = new SupportedLocale(Locale.ENGLISH);
+    public static final SupportedLocale RU = new SupportedLocale(new Locale("ru"));
 
-    public static final List<SupportedLocale> LOCALES = Lang.immutableListOf(DEFAULT, RU, EN);
-
+    public static final List<SupportedLocale> LOCALES = Lang.immutableListOf(DEFAULT, EN, ES, RU);
 
     public static SupportedLocale getLocaleByName(String name) {
         if (name == null) return DEFAULT;
         switch (name.toLowerCase()) {
             case "en":
                 return EN;
+            case "es":
+                return ES;
             case "ru":
                 return RU;
             default:
@@ -41,6 +47,7 @@ public final class Locales {
 
     public static String getNameByLocale(SupportedLocale locale) {
         if (locale == EN) return "en";
+        else if (locale == ES) return "es";
         else if (locale == RU) return "ru";
         else if (locale == DEFAULT) return "def";
         else throw new IllegalArgumentException("Unknown locale: " + locale);

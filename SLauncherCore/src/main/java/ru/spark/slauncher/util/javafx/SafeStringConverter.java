@@ -10,19 +10,9 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class SafeStringConverter<S extends T, T> extends StringConverter<T> {
-
-    private ExceptionalFunction<String, S, ?> converter;
-    private Class<?> malformedExceptionClass;
-    private S fallbackValue = null;
-    private List<Predicate<S>> restrictions = new ArrayList<>();
-
-    public <E extends Exception> SafeStringConverter(ExceptionalFunction<String, S, E> converter, Class<E> malformedExceptionClass) {
-        this.converter = converter;
-        this.malformedExceptionClass = malformedExceptionClass;
-    }
 
     public static SafeStringConverter<Integer, Number> fromInteger() {
         return new SafeStringConverter<Integer, Number>(Integer::parseInt, NumberFormatException.class)
@@ -38,6 +28,16 @@ public class SafeStringConverter<S extends T, T> extends StringConverter<T> {
         return new SafeStringConverter<Double, Number>(Double::parseDouble, NumberFormatException.class)
                 .restrict(Double::isFinite)
                 .fallbackTo(0.0);
+    }
+
+    private ExceptionalFunction<String, S, ?> converter;
+    private Class<?> malformedExceptionClass;
+    private S fallbackValue = null;
+    private List<Predicate<S>> restrictions = new ArrayList<>();
+
+    public <E extends Exception> SafeStringConverter(ExceptionalFunction<String, S, E> converter, Class<E> malformedExceptionClass) {
+        this.converter = converter;
+        this.malformedExceptionClass = malformedExceptionClass;
     }
 
     @Override

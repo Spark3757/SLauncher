@@ -4,7 +4,6 @@ import ru.spark.slauncher.download.DownloadProvider;
 import ru.spark.slauncher.download.VersionList;
 import ru.spark.slauncher.task.GetTask;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.NetworkUtils;
 
@@ -12,13 +11,13 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class GameVersionList extends VersionList<GameRemoteVersion> {
+    private final DownloadProvider downloadProvider;
 
-    public static final GameVersionList INSTANCE = new GameVersionList();
-
-    private GameVersionList() {
+    public GameVersionList(DownloadProvider downloadProvider) {
+        this.downloadProvider = downloadProvider;
     }
 
     @Override
@@ -28,20 +27,15 @@ public final class GameVersionList extends VersionList<GameRemoteVersion> {
 
     @Override
     protected Collection<GameRemoteVersion> getVersionsImpl(String gameVersion) {
-        lock.readLock().lock();
-        try {
-            return StringUtils.isBlank(gameVersion) ? versions.values() : versions.get(gameVersion);
-        } finally {
-            lock.readLock().unlock();
-        }
+        return versions.values();
     }
 
     @Override
-    public Task refreshAsync(DownloadProvider downloadProvider) {
+    public Task<?> refreshAsync() {
         GetTask task = new GetTask(NetworkUtils.toURL(downloadProvider.getVersionListURL()));
-        return new Task() {
+        return new Task<Void>() {
             @Override
-            public Collection<Task> getDependents() {
+            public Collection<Task<?>> getDependents() {
                 return Collections.singleton(task);
             }
 
@@ -57,7 +51,7 @@ public final class GameVersionList extends VersionList<GameRemoteVersion> {
                         versions.put(remoteVersion.getGameVersion(), new GameRemoteVersion(
                                 remoteVersion.getGameVersion(),
                                 remoteVersion.getGameVersion(),
-                                remoteVersion.getUrl(),
+                                Collections.singletonList(remoteVersion.getUrl()),
                                 remoteVersion.getType(), remoteVersion.getReleaseTime())
                         );
                     }

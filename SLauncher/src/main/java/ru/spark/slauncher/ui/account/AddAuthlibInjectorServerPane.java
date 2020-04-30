@@ -7,27 +7,27 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorServer;
+import ru.spark.slauncher.setting.ConfigHolder;
 import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
-import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.animation.ContainerAnimations;
-import ru.spark.slauncher.ui.animation.TransitionHandler;
+import ru.spark.slauncher.ui.animation.TransitionPane;
 import ru.spark.slauncher.ui.construct.DialogAware;
 import ru.spark.slauncher.ui.construct.DialogCloseEvent;
 import ru.spark.slauncher.ui.construct.SpinnerPane;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.NetworkUtils;
 
 import java.io.IOException;
 import java.util.logging.Level;
 
-import static ru.spark.slauncher.setting.ConfigHolder.config;
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.loadFXML;
 
 public class AddAuthlibInjectorServerPane extends StackPane implements DialogAware {
 
     @FXML
-    private StackPane addServerContainer;
+    private TransitionPane root;
     @FXML
     private Label lblServerUrl;
     @FXML
@@ -47,8 +47,6 @@ public class AddAuthlibInjectorServerPane extends StackPane implements DialogAwa
     @FXML
     private JFXButton btnAddNext;
 
-    private TransitionHandler transitionHandler;
-
     private AuthlibInjectorServer serverBeingAdded;
 
     public AddAuthlibInjectorServerPane(String url) {
@@ -58,9 +56,8 @@ public class AddAuthlibInjectorServerPane extends StackPane implements DialogAwa
     }
 
     public AddAuthlibInjectorServerPane() {
-        FXUtils.loadFXML(this, "/assets/fxml/authlib-injector-server-add.fxml");
-        transitionHandler = new TransitionHandler(addServerContainer);
-        transitionHandler.setContent(addServerPane, ContainerAnimations.NONE.getAnimationProducer());
+        loadFXML(this, "/assets/fxml/authlib-injector-server-add.fxml");
+        root.setContent(addServerPane, ContainerAnimations.NONE.getAnimationProducer());
 
         btnAddNext.disableProperty().bind(txtServerUrl.textProperty().isEmpty());
         nextPane.hideSpinner();
@@ -73,7 +70,7 @@ public class AddAuthlibInjectorServerPane extends StackPane implements DialogAwa
 
     private String resolveFetchExceptionMessage(Throwable exception) {
         if (exception instanceof IOException) {
-            return i18n("account.failed.connect_injector_server");
+            return I18n.i18n("account.failed.connect_injector_server");
         } else {
             return exception.getClass().getName() + ": " + exception.getLocalizedMessage();
         }
@@ -96,19 +93,19 @@ public class AddAuthlibInjectorServerPane extends StackPane implements DialogAwa
         nextPane.showSpinner();
         addServerPane.setDisable(true);
 
-        Task.of(() -> {
+        Task.runAsync(() -> {
             serverBeingAdded = AuthlibInjectorServer.locateServer(url);
-        }).whenComplete(Schedulers.javafx(), (isDependentSucceeded, exception) -> {
+        }).whenComplete(Schedulers.javafx(), exception -> {
             addServerPane.setDisable(false);
             nextPane.hideSpinner();
 
-            if (isDependentSucceeded) {
+            if (exception == null) {
                 lblServerName.setText(serverBeingAdded.getName());
                 lblServerUrl.setText(serverBeingAdded.getUrl());
 
                 lblServerWarning.setVisible("http".equals(NetworkUtils.toURL(serverBeingAdded.getUrl()).getProtocol()));
 
-                transitionHandler.setContent(confirmServerPane, ContainerAnimations.SWIPE_LEFT.getAnimationProducer());
+                root.setContent(confirmServerPane, ContainerAnimations.SWIPE_LEFT.getAnimationProducer());
             } else {
                 Logging.LOG.log(Level.WARNING, "Failed to resolve auth server: " + url, exception);
                 lblCreationWarning.setText(resolveFetchExceptionMessage(exception));
@@ -119,13 +116,13 @@ public class AddAuthlibInjectorServerPane extends StackPane implements DialogAwa
 
     @FXML
     private void onAddPrev() {
-        transitionHandler.setContent(addServerPane, ContainerAnimations.SWIPE_RIGHT.getAnimationProducer());
+        root.setContent(addServerPane, ContainerAnimations.SWIPE_RIGHT.getAnimationProducer());
     }
 
     @FXML
     private void onAddFinish() {
-        if (!config().getAuthlibInjectorServers().contains(serverBeingAdded)) {
-            config().getAuthlibInjectorServers().add(serverBeingAdded);
+        if (!ConfigHolder.config().getAuthlibInjectorServers().contains(serverBeingAdded)) {
+            ConfigHolder.config().getAuthlibInjectorServers().add(serverBeingAdded);
         }
         fireEvent(new DialogCloseEvent());
     }

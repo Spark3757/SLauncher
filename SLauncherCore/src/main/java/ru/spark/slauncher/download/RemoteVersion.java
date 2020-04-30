@@ -1,20 +1,24 @@
 package ru.spark.slauncher.download;
 
+import ru.spark.slauncher.game.Version;
+import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.util.ToStringBuilder;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
  * The remote version.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public class RemoteVersion implements Comparable<RemoteVersion> {
 
+    private final String libraryId;
     private final String gameVersion;
     private final String selfVersion;
-    private final String url;
+    private final List<String> urls;
     private final Type type;
 
     /**
@@ -22,10 +26,10 @@ public class RemoteVersion implements Comparable<RemoteVersion> {
      *
      * @param gameVersion the Minecraft version that this remote version suits.
      * @param selfVersion the version string of the remote version.
-     * @param url         the installer or universal jar URL.
+     * @param urls        the installer or universal jar original URL.
      */
-    public RemoteVersion(String gameVersion, String selfVersion, String url) {
-        this(gameVersion, selfVersion, url, Type.UNCATEGORIZED);
+    public RemoteVersion(String libraryId, String gameVersion, String selfVersion, List<String> urls) {
+        this(libraryId, gameVersion, selfVersion, Type.UNCATEGORIZED, urls);
     }
 
     /**
@@ -33,13 +37,18 @@ public class RemoteVersion implements Comparable<RemoteVersion> {
      *
      * @param gameVersion the Minecraft version that this remote version suits.
      * @param selfVersion the version string of the remote version.
-     * @param url         the installer or universal jar URL.
+     * @param urls        the installer or universal jar URL.
      */
-    public RemoteVersion(String gameVersion, String selfVersion, String url, Type type) {
+    public RemoteVersion(String libraryId, String gameVersion, String selfVersion, Type type, List<String> urls) {
+        this.libraryId = Objects.requireNonNull(libraryId);
         this.gameVersion = Objects.requireNonNull(gameVersion);
         this.selfVersion = Objects.requireNonNull(selfVersion);
-        this.url = Objects.requireNonNull(url);
+        this.urls = Objects.requireNonNull(urls);
         this.type = Objects.requireNonNull(type);
+    }
+
+    public String getLibraryId() {
+        return libraryId;
     }
 
     public String getGameVersion() {
@@ -50,12 +59,16 @@ public class RemoteVersion implements Comparable<RemoteVersion> {
         return selfVersion;
     }
 
-    public String getUrl() {
-        return url;
+    public List<String> getUrls() {
+        return urls;
     }
 
     public Type getVersionType() {
         return type;
+    }
+
+    public Task<Version> getInstallTask(DefaultDependencyManager dependencyManager, Version baseVersion) {
+        throw new UnsupportedOperationException(toString() + " cannot be installed yet");
     }
 
     @Override

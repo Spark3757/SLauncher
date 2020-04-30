@@ -20,7 +20,7 @@ import java.util.zip.ZipException;
 /**
  * Utilities of compressing
  *
- * @author Spark1337
+ * @author spark1337
  */
 public final class CompressingUtils {
 
@@ -60,6 +60,8 @@ public final class CompressingUtils {
                     return testZipPath(dir, root, result);
                 }
             });
+        } catch (IllegalArgumentException e) {
+            throw new IOException(e);
         }
         return result.get();
     }
@@ -76,6 +78,51 @@ public final class CompressingUtils {
             if (charset != null && testEncoding(zipFile, charset))
                 return charset;
         throw new IOException("Cannot find suitable encoding for the zip.");
+    }
+
+    public static final class Builder {
+        private boolean autoDetectEncoding = false;
+        private Collection<Charset> charsetCandidates;
+        private Charset encoding = StandardCharsets.UTF_8;
+        private boolean useTempFile = false;
+        private final boolean create;
+        private final Path zip;
+
+        public Builder(Path zip, boolean create) {
+            this.zip = zip;
+            this.create = create;
+        }
+
+        public Builder setAutoDetectEncoding(boolean autoDetectEncoding) {
+            this.autoDetectEncoding = autoDetectEncoding;
+            return this;
+        }
+
+        public Builder setCharsetCandidates(Collection<Charset> charsetCandidates) {
+            this.charsetCandidates = charsetCandidates;
+            return this;
+        }
+
+        public Builder setEncoding(Charset encoding) {
+            this.encoding = encoding;
+            return this;
+        }
+
+        public Builder setUseTempFile(boolean useTempFile) {
+            this.useTempFile = useTempFile;
+            return this;
+        }
+
+        public FileSystem build() throws IOException {
+            if (autoDetectEncoding) {
+                if (!testEncoding(zip, encoding)) {
+                    if (charsetCandidates == null)
+                        charsetCandidates = Charset.availableCharsets().values();
+                    encoding = findSuitableEncoding(zip, charsetCandidates);
+                }
+            }
+            return createZipFileSystem(zip, create, useTempFile, encoding);
+        }
     }
 
     public static Builder readonly(Path zipFile) {
@@ -116,7 +163,9 @@ public final class CompressingUtils {
             // Since Java 8 throws ZipError stupidly
             throw new ZipException(error.getMessage());
         } catch (UnsupportedOperationException ex) {
-            throw new IOException("Not a zip file", ex);
+            throw new ZipException("Not a zip file");
+        } catch (FileSystemNotFoundException ex) {
+            throw new ZipException("Java Environment is broken");
         }
     }
 
@@ -173,51 +222,6 @@ public final class CompressingUtils {
             return Optional.of(readTextZipEntry(file, name, encoding));
         } catch (IOException e) {
             return Optional.empty();
-        }
-    }
-
-    public static final class Builder {
-        private final boolean create;
-        private final Path zip;
-        private boolean autoDetectEncoding = false;
-        private Collection<Charset> charsetCandidates;
-        private Charset encoding = StandardCharsets.UTF_8;
-        private boolean useTempFile = false;
-
-        public Builder(Path zip, boolean create) {
-            this.zip = zip;
-            this.create = create;
-        }
-
-        public Builder setAutoDetectEncoding(boolean autoDetectEncoding) {
-            this.autoDetectEncoding = autoDetectEncoding;
-            return this;
-        }
-
-        public Builder setCharsetCandidates(Collection<Charset> charsetCandidates) {
-            this.charsetCandidates = charsetCandidates;
-            return this;
-        }
-
-        public Builder setEncoding(Charset encoding) {
-            this.encoding = encoding;
-            return this;
-        }
-
-        public Builder setUseTempFile(boolean useTempFile) {
-            this.useTempFile = useTempFile;
-            return this;
-        }
-
-        public FileSystem build() throws IOException {
-            if (autoDetectEncoding) {
-                if (!testEncoding(zip, encoding)) {
-                    if (charsetCandidates == null)
-                        charsetCandidates = Charset.availableCharsets().values();
-                    encoding = findSuitableEncoding(zip, charsetCandidates);
-                }
-            }
-            return createZipFileSystem(zip, create, useTempFile, encoding);
         }
     }
 }

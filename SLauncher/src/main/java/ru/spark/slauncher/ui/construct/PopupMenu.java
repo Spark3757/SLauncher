@@ -21,14 +21,7 @@ public class PopupMenu extends Control {
     private final BooleanProperty alwaysShowingVBar = new SimpleBooleanProperty();
 
     public PopupMenu() {
-    }
-
-    public static Node wrapPopupMenuItem(Node node) {
-        StackPane pane = new StackPane();
-        pane.getChildren().setAll(node);
-        pane.getStyleClass().add("menu-container");
-        node.setMouseTransparent(true);
-        return new RipplerContainer(pane);
+        getStyleClass().add("popup-menu");
     }
 
     public ObservableList<Node> getContent() {
@@ -39,17 +32,25 @@ public class PopupMenu extends Control {
         return alwaysShowingVBar.get();
     }
 
-    public void setAlwaysShowingVBar(boolean alwaysShowingVBar) {
-        this.alwaysShowingVBar.set(alwaysShowingVBar);
-    }
-
     public BooleanProperty alwaysShowingVBarProperty() {
         return alwaysShowingVBar;
+    }
+
+    public void setAlwaysShowingVBar(boolean alwaysShowingVBar) {
+        this.alwaysShowingVBar.set(alwaysShowingVBar);
     }
 
     @Override
     protected Skin<?> createDefaultSkin() {
         return new PopupMenuSkin();
+    }
+
+    public static Node wrapPopupMenuItem(Node node) {
+        StackPane pane = new StackPane();
+        pane.getChildren().setAll(node);
+        pane.getStyleClass().add("menu-container");
+        node.setMouseTransparent(true);
+        return new RipplerContainer(pane);
     }
 
     private class PopupMenuSkin extends SkinBase<PopupMenu> {
@@ -65,7 +66,7 @@ public class PopupMenu extends Control {
                     .otherwise(ScrollPane.ScrollBarPolicy.AS_NEEDED));
 
             VBox content = new VBox();
-            content.getStyleClass().add("menu");
+            content.getStyleClass().add("content");
             Bindings.bindContent(content.getChildren(), PopupMenu.this.getContent());
             scrollPane.setContent(content);
 

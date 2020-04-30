@@ -4,7 +4,6 @@ import ru.spark.slauncher.auth.AuthInfo;
 import ru.spark.slauncher.game.*;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Log4jLevel;
-import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
 import ru.spark.slauncher.util.io.FileUtils;
@@ -16,25 +15,24 @@ import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Supplier;
 
+import static ru.spark.slauncher.util.Lang.mapOf;
+import static ru.spark.slauncher.util.Pair.pair;
+
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class DefaultLauncher extends Launcher {
 
-    private final Map<String, Supplier<Boolean>> forbiddens = Lang.mapOf(
-            Pair.pair("-Xincgc", () -> options.getJava().getParsedVersion() >= JavaVersion.JAVA_9)
-    );
-
-    public DefaultLauncher(GameRepository repository, String versionId, AuthInfo authInfo, LaunchOptions options) {
-        this(repository, versionId, authInfo, options, null);
+    public DefaultLauncher(GameRepository repository, Version version, AuthInfo authInfo, LaunchOptions options) {
+        this(repository, version, authInfo, options, null);
     }
 
-    public DefaultLauncher(GameRepository repository, String versionId, AuthInfo authInfo, LaunchOptions options, ProcessListener listener) {
-        this(repository, versionId, authInfo, options, listener, true);
+    public DefaultLauncher(GameRepository repository, Version version, AuthInfo authInfo, LaunchOptions options, ProcessListener listener) {
+        this(repository, version, authInfo, options, listener, true);
     }
 
-    public DefaultLauncher(GameRepository repository, String versionId, AuthInfo authInfo, LaunchOptions options, ProcessListener listener, boolean daemon) {
-        super(repository, versionId, authInfo, options, listener, daemon);
+    public DefaultLauncher(GameRepository repository, Version version, AuthInfo authInfo, LaunchOptions options, ProcessListener listener, boolean daemon) {
+        super(repository, version, authInfo, options, listener, daemon);
     }
 
     private CommandBuilder generateCommandLine(File nativeFolder) throws IOException {
@@ -126,12 +124,15 @@ public class DefaultLauncher extends Launcher {
 
         res.add(version.getMainClass());
 
+        res.addAll(Arguments.parseStringArguments(version.getMinecraftArguments().map(StringUtils::tokenize).orElseGet(LinkedList::new), configuration));
+
         Map<String, Boolean> features = getFeatures();
-        res.addAll(Arguments.parseArguments(version.getArguments().map(Arguments::getGame).orElseGet(this::getDefaultGameArguments), configuration, features));
+        version.getArguments().map(Arguments::getGame).ifPresent(arguments -> res.addAll(Arguments.parseArguments(arguments, configuration, features)));
+        if (version.getMinecraftArguments().isPresent()) {
+            res.addAll(Arguments.parseArguments(this.getDefaultGameArguments(), configuration, features));
+        }
         if (authInfo.getArguments() != null && authInfo.getArguments().getGame() != null && !authInfo.getArguments().getGame().isEmpty())
             res.addAll(Arguments.parseArguments(authInfo.getArguments().getGame(), configuration, features));
-
-        res.addAll(Arguments.parseStringArguments(version.getMinecraftArguments().map(StringUtils::tokenize).orElseGet(LinkedList::new), configuration));
 
         if (StringUtils.isNotBlank(options.getServerIp())) {
             String[] args = options.getServerIp().split(":");
@@ -170,6 +171,10 @@ public class DefaultLauncher extends Launcher {
                 options.getHeight() != null && options.getHeight() != 0 && options.getWidth() != null && options.getWidth() != 0
         );
     }
+
+    private final Map<String, Supplier<Boolean>> forbiddens = mapOf(
+            pair("-Xincgc", () -> options.getJava().getParsedVersion() >= JavaVersion.JAVA_9_AND_LATER)
+    );
 
     protected Map<String, Supplier<Boolean>> getForbiddens() {
         return forbiddens;
@@ -214,26 +219,26 @@ public class DefaultLauncher extends Launcher {
     }
 
     protected Map<String, String> getConfigurations() {
-        return Lang.mapOf(
-                Pair.pair("${auth_player_name}", authInfo.getUsername()),
-                Pair.pair("${auth_session}", authInfo.getAccessToken()),
-                Pair.pair("${auth_access_token}", authInfo.getAccessToken()),
-                Pair.pair("${auth_uuid}", UUIDTypeAdapter.fromUUID(authInfo.getUUID())),
-                Pair.pair("${version_name}", Optional.ofNullable(options.getVersionName()).orElse(version.getId())),
-                Pair.pair("${profile_name}", Optional.ofNullable(options.getProfileName()).orElse("Minecraft")),
-                Pair.pair("${version_type}", version.getType().getId()),
-                Pair.pair("${game_directory}", repository.getRunDirectory(version.getId()).getAbsolutePath()),
-                Pair.pair("${user_type}", "mojang"),
-                Pair.pair("${assets_index_name}", version.getAssetIndex().getId()),
-                Pair.pair("${user_properties}", authInfo.getUserProperties()),
-                Pair.pair("${resolution_width}", options.getWidth().toString()),
-                Pair.pair("${resolution_height}", options.getHeight().toString())
+        return mapOf(
+                pair("${auth_player_name}", authInfo.getUsername()),
+                pair("${auth_session}", authInfo.getAccessToken()),
+                pair("${auth_access_token}", authInfo.getAccessToken()),
+                pair("${auth_uuid}", UUIDTypeAdapter.fromUUID(authInfo.getUUID())),
+                pair("${version_name}", Optional.ofNullable(options.getVersionName()).orElse(version.getId())),
+                pair("${profile_name}", Optional.ofNullable(options.getProfileName()).orElse("Minecraft")),
+                pair("${version_type}", Optional.ofNullable(options.getVersionType()).orElse(version.getType().getId())),
+                pair("${game_directory}", repository.getRunDirectory(version.getId()).getAbsolutePath()),
+                pair("${user_type}", "mojang"),
+                pair("${assets_index_name}", version.getAssetIndex().getId()),
+                pair("${user_properties}", authInfo.getUserProperties()),
+                pair("${resolution_width}", options.getWidth().toString()),
+                pair("${resolution_height}", options.getHeight().toString())
         );
     }
 
     @Override
     public ManagedProcess launch() throws IOException, InterruptedException {
-        File nativeFolder = repository.getNativeDirectory(versionId);
+        File nativeFolder = repository.getNativeDirectory(version.getId());
 
         // To guarantee that when failed to generate launch command line, we will not call pre-launch command
         List<String> rawCommandLine = generateCommandLine(nativeFolder).asList();
@@ -242,14 +247,24 @@ public class DefaultLauncher extends Launcher {
 
         File runDirectory = repository.getRunDirectory(version.getId());
 
-        if (StringUtils.isNotBlank(options.getPreLaunchCommand()))
-            new ProcessBuilder(options.getPreLaunchCommand())
+        if (StringUtils.isNotBlank(options.getPreLaunchCommand())) {
+            String versionName = Optional.ofNullable(options.getVersionName()).orElse(version.getId());
+            String preLaunchCommand = options.getPreLaunchCommand()
+                    .replace("$INST_NAME", versionName)
+                    .replace("$INST_ID", versionName)
+                    .replace("$INST_DIR", repository.getVersionRoot(version.getId()).getAbsolutePath())
+                    .replace("$INST_MC_DIR", repository.getRunDirectory(version.getId()).getAbsolutePath())
+                    .replace("$INST_JAVA", options.getJava().getBinary().toString());
+
+            new ProcessBuilder(StringUtils.tokenize(preLaunchCommand))
                     .directory(runDirectory).start().waitFor();
+        }
 
         Process process;
         try {
             ProcessBuilder builder = new ProcessBuilder(rawCommandLine).directory(runDirectory);
-            builder.environment().put("APPDATA", options.getGameDir().getAbsoluteFile().getParent());
+            String appdata = options.getGameDir().getAbsoluteFile().getParent();
+            if (appdata != null) builder.environment().put("APPDATA", appdata);
             process = builder.start();
         } catch (IOException e) {
             throw new ProcessCreationException(e);
@@ -265,7 +280,7 @@ public class DefaultLauncher extends Launcher {
     public void makeLaunchScript(File scriptFile) throws IOException {
         boolean isWindows = OperatingSystem.WINDOWS == OperatingSystem.CURRENT_OS;
 
-        File nativeFolder = repository.getNativeDirectory(versionId);
+        File nativeFolder = repository.getNativeDirectory(version.getId());
         decompressNatives(nativeFolder);
 
         if (isWindows && !FileUtils.getExtension(scriptFile).equals("bat"))
@@ -297,12 +312,12 @@ public class DefaultLauncher extends Launcher {
     private void startMonitors(ManagedProcess managedProcess, ProcessListener processListener, boolean isDaemon) {
         processListener.setProcess(managedProcess);
         Thread stdout = Lang.thread(new StreamPump(managedProcess.getProcess().getInputStream(), it -> {
-            processListener.onLog(it + OperatingSystem.LINE_SEPARATOR, Optional.ofNullable(Log4jLevel.guessLevel(it)).orElse(Log4jLevel.INFO));
+            processListener.onLog(it, Optional.ofNullable(Log4jLevel.guessLevel(it)).orElse(Log4jLevel.INFO));
             managedProcess.addLine(it);
         }), "stdout-pump", isDaemon);
         managedProcess.addRelatedThread(stdout);
         Thread stderr = Lang.thread(new StreamPump(managedProcess.getProcess().getErrorStream(), it -> {
-            processListener.onLog(it + OperatingSystem.LINE_SEPARATOR, Log4jLevel.ERROR);
+            processListener.onLog(it, Log4jLevel.ERROR);
             managedProcess.addLine(it);
         }), "stderr-pump", isDaemon);
         managedProcess.addRelatedThread(stderr);

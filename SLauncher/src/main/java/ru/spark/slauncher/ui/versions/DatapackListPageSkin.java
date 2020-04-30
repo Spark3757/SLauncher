@@ -1,29 +1,28 @@
 package ru.spark.slauncher.ui.versions;
 
-import com.jfoenix.controls.JFXTreeTableColumn;
-import com.jfoenix.controls.JFXTreeTableView;
-import com.jfoenix.controls.RecursiveTreeItem;
+import com.jfoenix.controls.JFXCheckBox;
+import com.jfoenix.controls.JFXListView;
 import com.jfoenix.controls.datamodels.treetable.RecursiveTreeObject;
 import com.jfoenix.effects.JFXDepthManager;
+import javafx.beans.binding.Bindings;
 import javafx.beans.property.BooleanProperty;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
-import javafx.scene.Node;
+import javafx.geometry.Pos;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SkinBase;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import ru.spark.slauncher.mod.Datapack;
-import ru.spark.slauncher.ui.FXUtils;
+import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.SVG;
-import ru.spark.slauncher.ui.ToolbarListPageSkin;
-import ru.spark.slauncher.ui.construct.JFXCheckBoxTreeTableCell;
+import ru.spark.slauncher.ui.construct.FloatListCell;
 import ru.spark.slauncher.ui.construct.SpinnerPane;
 import ru.spark.slauncher.ui.construct.TwoLineListItem;
 import ru.spark.slauncher.util.StringUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.ToolbarListPageSkin.createToolbarButton;
 
 class DatapackListPageSkin extends SkinBase<DatapackListPage> {
 
@@ -31,7 +30,8 @@ class DatapackListPageSkin extends SkinBase<DatapackListPage> {
         super(skinnable);
 
         BorderPane root = new BorderPane();
-        JFXTreeTableView<DatapackInfoObject> tableView = new JFXTreeTableView<>();
+        root.getStyleClass().add("content-background");
+        JFXListView<DatapackInfoObject> listView = new JFXListView<>();
 
         {
             HBox toolbar = new HBox();
@@ -39,14 +39,17 @@ class DatapackListPageSkin extends SkinBase<DatapackListPage> {
             JFXDepthManager.setDepth(toolbar, 1);
             toolbar.setPickOnBounds(false);
 
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("button.refresh"), SVG::refresh, skinnable::refresh));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("datapack.add"), SVG::plus, skinnable::add));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.remove"), SVG::delete, () ->
-                    skinnable.removeSelected(tableView.getSelectionModel().getSelectedItems())));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.enable"), SVG::check, () ->
-                    skinnable.enableSelected(tableView.getSelectionModel().getSelectedItems())));
-            toolbar.getChildren().add(ToolbarListPageSkin.createToolbarButton(i18n("mods.disable"), SVG::close, () ->
-                    skinnable.disableSelected(tableView.getSelectionModel().getSelectedItems())));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("button.refresh"), SVG::refresh, skinnable::refresh));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("datapack.add"), SVG::plus, skinnable::add));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("button.remove"), SVG::delete, () -> {
+                Controllers.confirm(I18n.i18n("button.remove.confirm"), I18n.i18n("button.remove"), () -> {
+                    skinnable.removeSelected(listView.getSelectionModel().getSelectedItems());
+                }, null);
+            }));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("mods.enable"), SVG::check, () ->
+                    skinnable.enableSelected(listView.getSelectionModel().getSelectedItems())));
+            toolbar.getChildren().add(createToolbarButton(I18n.i18n("mods.disable"), SVG::close, () ->
+                    skinnable.disableSelected(listView.getSelectionModel().getSelectedItems())));
             root.setTop(toolbar);
         }
 
@@ -55,26 +58,43 @@ class DatapackListPageSkin extends SkinBase<DatapackListPage> {
             center.getStyleClass().add("large-spinner-pane");
             center.loadingProperty().bind(skinnable.loadingProperty());
 
-            tableView.getStyleClass().addAll("no-header");
-            tableView.setShowRoot(false);
-            tableView.setEditable(true);
-            tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-            tableView.setRoot(new RecursiveTreeItem<>(skinnable.getItems(), RecursiveTreeObject::getChildren));
+            listView.setCellFactory(x -> new FloatListCell<DatapackInfoObject>() {
+                JFXCheckBox checkBox = new JFXCheckBox();
+                TwoLineListItem content = new TwoLineListItem();
+                BooleanProperty booleanProperty;
 
-            JFXTreeTableColumn<DatapackInfoObject, Boolean> activeColumn = new JFXTreeTableColumn<>();
-            FXUtils.setupCellValueFactory(activeColumn, DatapackInfoObject::activeProperty);
-            activeColumn.setCellFactory(c -> new JFXCheckBoxTreeTableCell<>());
-            activeColumn.setEditable(true);
-            activeColumn.setMaxWidth(40);
-            activeColumn.setMinWidth(40);
+                {
+                    Region clippedContainer = (Region) listView.lookup(".clipped-container");
+                    setPrefWidth(0);
+                    HBox container = new HBox(8);
+                    container.setPadding(new Insets(0, 0, 0, 6));
+                    container.setAlignment(Pos.CENTER_LEFT);
+                    pane.getChildren().add(container);
+                    pane.setPadding(new Insets(8, 8, 8, 0));
+                    if (clippedContainer != null) {
+                        maxWidthProperty().bind(clippedContainer.widthProperty());
+                        prefWidthProperty().bind(clippedContainer.widthProperty());
+                        minWidthProperty().bind(clippedContainer.widthProperty());
+                    }
 
-            JFXTreeTableColumn<DatapackInfoObject, Node> detailColumn = new JFXTreeTableColumn<>();
-            FXUtils.setupCellValueFactory(detailColumn, DatapackInfoObject::nodeProperty);
+                    container.getChildren().setAll(checkBox, content);
+                }
 
-            tableView.getColumns().setAll(activeColumn, detailColumn);
+                @Override
+                protected void updateControl(DatapackInfoObject dataItem, boolean empty) {
+                    if (empty) return;
+                    content.setTitle(dataItem.getTitle());
+                    content.setSubtitle(dataItem.getSubtitle());
+                    if (booleanProperty != null) {
+                        checkBox.selectedProperty().unbindBidirectional(booleanProperty);
+                    }
+                    checkBox.selectedProperty().bindBidirectional(booleanProperty = dataItem.active);
+                }
+            });
+            listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            Bindings.bindContent(listView.getItems(), skinnable.getItems());
 
-            tableView.setColumnResizePolicy(JFXTreeTableView.CONSTRAINED_RESIZE_POLICY);
-            center.setContent(tableView);
+            center.setContent(listView);
             root.setCenter(center);
         }
 
@@ -84,21 +104,18 @@ class DatapackListPageSkin extends SkinBase<DatapackListPage> {
     static class DatapackInfoObject extends RecursiveTreeObject<DatapackInfoObject> {
         private final BooleanProperty active;
         private final Datapack.Pack packInfo;
-        private final ObjectProperty<Node> node;
 
         DatapackInfoObject(Datapack.Pack packInfo) {
             this.packInfo = packInfo;
             this.active = packInfo.activeProperty();
-            this.node = new SimpleObjectProperty<>(FXUtils.wrapMargin(new TwoLineListItem(packInfo.getId(), StringUtils.parseColorEscapes(packInfo.getDescription())),
-                    new Insets(8, 0, 8, 0)));
         }
 
-        BooleanProperty activeProperty() {
-            return active;
+        String getTitle() {
+            return packInfo.getId();
         }
 
-        ObjectProperty<Node> nodeProperty() {
-            return node;
+        String getSubtitle() {
+            return StringUtils.parseColorEscapes(packInfo.getDescription());
         }
 
         Datapack.Pack getPackInfo() {

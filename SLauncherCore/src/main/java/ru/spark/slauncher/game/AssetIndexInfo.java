@@ -3,7 +3,7 @@ package ru.spark.slauncher.game;
 import ru.spark.slauncher.util.Immutable;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public class AssetIndexInfo extends IdDownloadInfo {

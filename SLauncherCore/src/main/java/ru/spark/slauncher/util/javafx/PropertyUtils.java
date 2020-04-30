@@ -19,6 +19,16 @@ public final class PropertyUtils {
     private PropertyUtils() {
     }
 
+    public static class PropertyHandle {
+        public final WritableValue<Object> accessor;
+        public final Observable observable;
+
+        public PropertyHandle(WritableValue<Object> accessor, Observable observable) {
+            this.accessor = accessor;
+            this.observable = observable;
+        }
+    }
+
     @SuppressWarnings({"rawtypes", "unchecked"})
     public static Map<String, Function<Object, PropertyHandle>> getPropertyHandleFactories(Class<?> type) {
         Map<String, Method> collectionGetMethods = new LinkedHashMap<>();
@@ -136,15 +146,5 @@ public final class PropertyUtils {
                 .forEach((name, factory) -> {
                     factory.apply(instance).observable.addListener(listener);
                 });
-    }
-
-    public static class PropertyHandle {
-        public final WritableValue<Object> accessor;
-        public final Observable observable;
-
-        public PropertyHandle(WritableValue<Object> accessor, Observable observable) {
-            this.accessor = accessor;
-            this.observable = observable;
-        }
     }
 }

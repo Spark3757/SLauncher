@@ -1,5 +1,6 @@
 package ru.spark.slauncher.event;
 
+import ru.spark.slauncher.launch.ExitWaiter;
 import ru.spark.slauncher.util.ToStringBuilder;
 import ru.spark.slauncher.util.platform.ManagedProcess;
 
@@ -8,7 +9,7 @@ import ru.spark.slauncher.util.platform.ManagedProcess;
  * <br></br>
  * This event is fired on the {@link EventBus#EVENT_BUS}
  *
- * @author Spark1337
+ * @author spark1337
  */
 public final class ProcessExitedAbnormallyEvent extends Event {
 
@@ -17,7 +18,7 @@ public final class ProcessExitedAbnormallyEvent extends Event {
     /**
      * Constructor.
      *
-     * @param source  {@link ru.spark.slauncher.launch.ExitWaiter}
+     * @param source  {@link ExitWaiter}
      * @param process The process that exited abnormally.
      */
     public ProcessExitedAbnormallyEvent(Object source, ManagedProcess process) {

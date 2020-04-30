@@ -1,7 +1,7 @@
 package ru.spark.slauncher.auth;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class AuthenticationException extends Exception {
     public AuthenticationException() {

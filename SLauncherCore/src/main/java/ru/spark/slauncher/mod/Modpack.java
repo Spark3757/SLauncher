@@ -1,9 +1,10 @@
 package ru.spark.slauncher.mod;
 
 import java.nio.charset.Charset;
+import java.util.List;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class Modpack {
     private final String name;
@@ -66,5 +67,19 @@ public final class Modpack {
 
     public Modpack setManifest(Object manifest) {
         return new Modpack(name, author, version, gameVersion, description, encoding, manifest);
+    }
+
+    public static boolean acceptFile(String path, List<String> blackList, List<String> whiteList) {
+        if (path.isEmpty())
+            return true;
+        for (String s : blackList)
+            if (path.equals(s))
+                return false;
+        if (whiteList == null || whiteList.isEmpty())
+            return true;
+        for (String s : whiteList)
+            if (path.equals(s))
+                return true;
+        return false;
     }
 }

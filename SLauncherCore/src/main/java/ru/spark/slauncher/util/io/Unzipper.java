@@ -100,15 +100,12 @@ public class Unzipper {
                     Path destFile = dest.resolve(relativePath);
                     if (filter != null && !filter.accept(file, false, destFile, relativePath))
                         return FileVisitResult.CONTINUE;
-
                     try {
-                        Files.copy(file, destFile, StandardCopyOption.REPLACE_EXISTING);
                         Files.copy(file, destFile, replaceExistentFile ? new CopyOption[]{StandardCopyOption.REPLACE_EXISTING} : new CopyOption[]{});
                     } catch (FileAlreadyExistsException e) {
                         if (replaceExistentFile)
                             throw e;
                     }
-
                     return FileVisitResult.CONTINUE;
                 }
 

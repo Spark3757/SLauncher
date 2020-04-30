@@ -1,6 +1,6 @@
 package ru.spark.slauncher.util.platform;
 
-import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
@@ -8,6 +8,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -20,37 +21,14 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
+import static ru.spark.slauncher.util.Logging.LOG;
 
 /**
  * Represents a Java installation.
  *
- * @author Spark1337
+ * @author spark1337
  */
 public final class JavaVersion {
-
-    public static final int UNKNOWN = -1;
-    public static final int JAVA_7 = 70;
-    public static final int JAVA_8 = 80;
-    public static final int JAVA_9 = 90;
-    public static final int JAVA_10 = 100;
-    public static final int JAVA_11 = 110;
-    public static final JavaVersion CURRENT_JAVA;
-    private static final Pattern REGEX = Pattern.compile("version \"(?<version>(.*?))\"");
-    private static final CountDownLatch LATCH = new CountDownLatch(1);
-    private static List<JavaVersion> JAVAS;
-
-    static {
-        Path currentExecutable = getExecutable(Paths.get(System.getProperty("java.home")));
-        try {
-            currentExecutable = currentExecutable.toRealPath();
-        } catch (IOException e) {
-            Logging.LOG.log(Level.WARNING, "Failed to resolve current Java path: " + currentExecutable, e);
-        }
-        CURRENT_JAVA = new JavaVersion(
-                currentExecutable,
-                System.getProperty("java.version"),
-                Platform.PLATFORM);
-    }
 
     private final Path binary;
     private final String longVersion;
@@ -64,14 +42,48 @@ public final class JavaVersion {
         version = parseVersion(longVersion);
     }
 
+    public Path getBinary() {
+        return binary;
+    }
+
+    public String getVersion() {
+        return longVersion;
+    }
+
+    public Platform getPlatform() {
+        return platform;
+    }
+
+    public VersionNumber getVersionNumber() {
+        return VersionNumber.asVersion(longVersion);
+    }
+
+    /**
+     * The major version of Java installation.
+     *
+     * @see JavaVersion#JAVA_8
+     * @see JavaVersion#JAVA_7
+     * @see JavaVersion#UNKNOWN
+     */
+    public int getParsedVersion() {
+        return version;
+    }
+
+    private static final Pattern REGEX = Pattern.compile("version \"(?<version>(.*?))\"");
+    private static final Pattern VERSION = Pattern.compile("^(?<version>[0-9]+)");
+
+    public static final int UNKNOWN = -1;
+    public static final int JAVA_7 = 70;
+    public static final int JAVA_8 = 80;
+    public static final int JAVA_9_AND_LATER = 90;
+
     private static int parseVersion(String version) {
-        if (version.startsWith("11"))
-            return JAVA_11;
-        else if (version.startsWith("10"))
-            return JAVA_10;
-        else if (version.startsWith("9"))
-            return JAVA_9;
-        else if (version.contains("1.8"))
+        Matcher matcher = VERSION.matcher(version);
+        if (matcher.find()) {
+            int head = Lang.parseInt(matcher.group(), -1);
+            if (head > 1) return JAVA_9_AND_LATER;
+        }
+        if (version.contains("1.8"))
             return JAVA_8;
         else if (version.contains("1.7"))
             return JAVA_7;
@@ -82,11 +94,6 @@ public final class JavaVersion {
     public static JavaVersion fromExecutable(Path executable) throws IOException {
         Platform platform = Platform.BIT_32;
         String version = null;
-
-        // javaw is only used on windows
-        if ("javaw.exe".equalsIgnoreCase(executable.getFileName().toString())) {
-            executable = executable.resolveSibling("java.exe");
-        }
 
         executable = executable.toRealPath();
 
@@ -122,6 +129,24 @@ public final class JavaVersion {
         return CURRENT_JAVA;
     }
 
+    public static final JavaVersion CURRENT_JAVA;
+
+    static {
+        Path currentExecutable = getExecutable(Paths.get(System.getProperty("java.home")));
+        try {
+            currentExecutable = currentExecutable.toRealPath();
+        } catch (IOException e) {
+            LOG.log(Level.WARNING, "Failed to resolve current Java path: " + currentExecutable, e);
+        }
+        CURRENT_JAVA = new JavaVersion(
+                currentExecutable,
+                System.getProperty("java.version"),
+                Platform.PLATFORM);
+    }
+
+    private static List<JavaVersion> JAVAS;
+    private static final CountDownLatch LATCH = new CountDownLatch(1);
+
     public static List<JavaVersion> getJavas() throws InterruptedException {
         if (JAVAS != null)
             return JAVAS;
@@ -135,10 +160,10 @@ public final class JavaVersion {
 
         List<JavaVersion> javaVersions;
 
-        try {
-            javaVersions = lookupJavas(searchPotentialJavaHomes());
+        try (Stream<Path> stream = searchPotentialJavaHomes()) {
+            javaVersions = lookupJavas(stream);
         } catch (IOException e) {
-            Logging.LOG.log(Level.WARNING, "Failed to search Java homes", e);
+            LOG.log(Level.WARNING, "Failed to search Java homes", e);
             javaVersions = new ArrayList<>();
         }
 
@@ -160,7 +185,7 @@ public final class JavaVersion {
                     try {
                         return Stream.of(executable.toRealPath());
                     } catch (IOException e) {
-                        Logging.LOG.log(Level.WARNING, "Failed to lookup Java executable at " + executable, e);
+                        LOG.log(Level.WARNING, "Failed to lookup Java executable at " + executable, e);
                         return Stream.empty();
                     }
                 })
@@ -172,7 +197,7 @@ public final class JavaVersion {
                     try {
                         return Stream.of(fromExecutable(executable));
                     } catch (IOException e) {
-                        Logging.LOG.log(Level.WARNING, "Failed to determine Java at " + executable, e);
+                        LOG.log(Level.WARNING, "Failed to determine Java at " + executable, e);
                         return Stream.empty();
                     }
                 })
@@ -218,7 +243,11 @@ public final class JavaVersion {
                 continue;
             String home = queryRegisterValue(java, "JavaHome");
             if (home != null) {
-                homes.add(Paths.get(home));
+                try {
+                    homes.add(Paths.get(home));
+                } catch (InvalidPathException e) {
+                    LOG.log(Level.WARNING, "Invalid Java path in system registry: " + home);
+                }
             }
         }
         return homes;
@@ -262,36 +291,6 @@ public final class JavaVersion {
             }
         }
         return null;
-    }
-
-    public Path getBinary() {
-        return binary;
-    }
-
-    public String getVersion() {
-        return longVersion;
-    }
-
-    public Platform getPlatform() {
-        return platform;
-    }
-
-    public VersionNumber getVersionNumber() {
-        return VersionNumber.asVersion(longVersion);
-    }
-
-    /**
-     * The major version of Java installation.
-     *
-     * @see JavaVersion#JAVA_11
-     * @see JavaVersion#JAVA_10
-     * @see JavaVersion#JAVA_9
-     * @see JavaVersion#JAVA_8
-     * @see JavaVersion#JAVA_7
-     * @see JavaVersion#UNKNOWN
-     */
-    public int getParsedVersion() {
-        return version;
     }
     // ====
 }

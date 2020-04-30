@@ -3,11 +3,12 @@
 <?import com.jfoenix.controls.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import ru.spark.slauncher.ui.animation.TransitionPane?>
 <?import ru.spark.slauncher.ui.construct.SpinnerPane?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane">
-    <StackPane fx:id="addServerContainer">
+    <TransitionPane fx:id="root">
         <JFXDialogLayout fx:id="addServerPane">
             <heading>
                 <Label text="%account.injector.add"/>
@@ -51,5 +52,5 @@
                 <JFXButton onMouseClicked="#onAddFinish" text="%wizard.finish" styleClass="dialog-accept"/>
             </actions>
         </JFXDialogLayout>
-    </StackPane>
+    </TransitionPane>
 </fx:root>

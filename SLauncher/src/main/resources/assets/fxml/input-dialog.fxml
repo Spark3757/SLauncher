@@ -2,19 +2,23 @@
 
 <?import com.jfoenix.controls.JFXButton?>
 <?import com.jfoenix.controls.JFXDialogLayout?>
-<?import com.jfoenix.controls.JFXTextField?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
 <?import ru.spark.slauncher.ui.construct.SpinnerPane?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane">
     <JFXDialogLayout>
         <heading>
-            <Label fx:id="content"/>
+            <HBox>
+                <Label fx:id="title"/>
+            </HBox>
         </heading>
         <body>
-            <JFXTextField fx:id="textField"/>
+            <VBox fx:id="vbox">
+            </VBox>
         </body>
         <actions>
             <Label fx:id="lblCreationWarning"/>

@@ -16,9 +16,10 @@ import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorServer;
 import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.SVG;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.BindingMapping;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
+import static ru.spark.slauncher.ui.FXUtils.runInFX;
 
 public class AccountListItemSkin extends SkinBase<AccountListItem> {
 
@@ -70,7 +71,7 @@ public class AccountListItemSkin extends SkinBase<AccountListItem> {
         btnRefresh.setOnMouseClicked(e -> skinnable.refresh());
         btnRefresh.getStyleClass().add("toggle-icon4");
         btnRefresh.setGraphic(SVG.refresh(Theme.blackFillBinding(), -1, -1));
-        FXUtils.runInFX(() -> FXUtils.installFastTooltip(btnRefresh, i18n("button.refresh")));
+        runInFX(() -> FXUtils.installFastTooltip(btnRefresh, I18n.i18n("button.refresh")));
         right.getChildren().add(btnRefresh);
 
         JFXButton btnRemove = new JFXButton();
@@ -78,11 +79,12 @@ public class AccountListItemSkin extends SkinBase<AccountListItem> {
         btnRemove.getStyleClass().add("toggle-icon4");
         BorderPane.setAlignment(btnRemove, Pos.CENTER);
         btnRemove.setGraphic(SVG.delete(Theme.blackFillBinding(), -1, -1));
-        FXUtils.runInFX(() -> FXUtils.installFastTooltip(btnRemove, i18n("button.delete")));
+        runInFX(() -> FXUtils.installFastTooltip(btnRemove, I18n.i18n("button.delete")));
         right.getChildren().add(btnRemove);
         root.setRight(right);
 
-        root.setStyle("-fx-background-color: white; -fx-padding: 8 8 8 0;");
+        root.getStyleClass().add("card");
+        root.setStyle("-fx-padding: 8 8 8 0;");
         JFXDepthManager.setDepth(root, 1);
 
         getChildren().setAll(root);

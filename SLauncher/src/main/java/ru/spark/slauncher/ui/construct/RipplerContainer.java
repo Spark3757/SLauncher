@@ -32,7 +32,6 @@ public class RipplerContainer extends StackPane {
     private final BooleanProperty selected = new SimpleBooleanProperty(this, "selected", false);
 
     private final StackPane buttonContainer = new StackPane();
-    private final CornerRadii defaultRadii = new CornerRadii(3);
     private final JFXRippler buttonRippler = new JFXRippler(new StackPane()) {
         @Override
         protected Node getMask() {
@@ -43,6 +42,8 @@ public class RipplerContainer extends StackPane {
             return mask;
         }
     };
+
+    private final CornerRadii defaultRadii = new CornerRadii(3);
 
     public RipplerContainer(@NamedArg("container") Node container) {
         setContainer(container);
@@ -83,10 +84,6 @@ public class RipplerContainer extends StackPane {
         }));
     }
 
-    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
-        return StyleableProperties.FACTORY.getCssMetaData();
-    }
-
     protected void updateChildren() {
         getChildren().addAll(buttonContainer, getContainer());
 
@@ -98,41 +95,45 @@ public class RipplerContainer extends StackPane {
         return container.get();
     }
 
-    public void setContainer(Node container) {
-        this.container.set(container);
-    }
-
     public ObjectProperty<Node> containerProperty() {
         return container;
+    }
+
+    public void setContainer(Node container) {
+        this.container.set(container);
     }
 
     public Paint getRipplerFill() {
         return ripplerFill.get();
     }
 
-    public void setRipplerFill(Paint ripplerFill) {
-        this.ripplerFill.set(ripplerFill);
-    }
-
     public StyleableObjectProperty<Paint> ripplerFillProperty() {
         return ripplerFill;
+    }
+
+    public void setRipplerFill(Paint ripplerFill) {
+        this.ripplerFill.set(ripplerFill);
     }
 
     public boolean isSelected() {
         return selected.get();
     }
 
-    public void setSelected(boolean selected) {
-        this.selected.set(selected);
-    }
-
     public BooleanProperty selectedProperty() {
         return selected;
+    }
+
+    public void setSelected(boolean selected) {
+        this.selected.set(selected);
     }
 
     @Override
     public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
         return getClassCssMetaData();
+    }
+
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.FACTORY.getCssMetaData();
     }
 
     private static class StyleableProperties {

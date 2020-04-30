@@ -1,9 +1,11 @@
 package ru.spark.slauncher.util.function;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public interface ExceptionalConsumer<T, E extends Exception> {
+    void accept(T t) throws E;
+
     static <T, E extends Exception> ExceptionalConsumer<T, E> fromRunnable(ExceptionalRunnable<E> runnable) {
         return new ExceptionalConsumer<T, E>() {
             @Override
@@ -22,6 +24,4 @@ public interface ExceptionalConsumer<T, E extends Exception> {
         return s -> {
         };
     }
-
-    void accept(T t) throws E;
 }

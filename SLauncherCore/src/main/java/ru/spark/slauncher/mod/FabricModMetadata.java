@@ -5,7 +5,7 @@ import com.google.gson.annotations.JsonAdapter;
 import ru.spark.slauncher.util.Immutable;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.io.CompressingUtils;
-import ru.spark.slauncher.util.io.IOUtils;
+import ru.spark.slauncher.util.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -43,7 +43,7 @@ public final class FabricModMetadata {
             Path mcmod = fs.getPath("fabric.mod.json");
             if (Files.notExists(mcmod))
                 throw new IOException("File " + modFile + " is not a Fabric mod.");
-            FabricModMetadata metadata = JsonUtils.fromNonNullJson(IOUtils.readFullyAsString(Files.newInputStream(mcmod)), FabricModMetadata.class);
+            FabricModMetadata metadata = JsonUtils.fromNonNullJson(FileUtils.readText(mcmod), FabricModMetadata.class);
             String authors = metadata.authors == null ? "" : metadata.authors.stream().map(author -> author.name).collect(Collectors.joining(", "));
             return new ModInfo(modManager, modFile, metadata.name, metadata.description,
                     authors, metadata.version, "", metadata.contact != null ? metadata.contact.getOrDefault("homepage", "") : "");
@@ -64,7 +64,6 @@ public final class FabricModMetadata {
     }
 
     public static final class FabricModAuthorSerializer implements JsonSerializer<FabricModAuthor>, JsonDeserializer<FabricModAuthor> {
-
         @Override
         public FabricModAuthor deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) throws JsonParseException {
             return json.isJsonPrimitive() ? new FabricModAuthor(json.getAsString()) : new FabricModAuthor(json.getAsJsonObject().getAsJsonPrimitive("name").getAsString());

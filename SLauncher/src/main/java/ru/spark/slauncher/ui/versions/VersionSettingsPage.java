@@ -7,16 +7,21 @@ import com.jfoenix.controls.JFXToggleButton;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
-import ru.spark.slauncher.setting.*;
+import ru.spark.slauncher.game.GameDirectoryType;
+import ru.spark.slauncher.setting.LauncherVisibility;
+import ru.spark.slauncher.setting.Profile;
+import ru.spark.slauncher.setting.Profiles;
+import ru.spark.slauncher.setting.VersionSetting;
 import ru.spark.slauncher.task.Schedulers;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.Controllers;
@@ -24,8 +29,10 @@ import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.ComponentList;
 import ru.spark.slauncher.ui.construct.ImagePickerItem;
 import ru.spark.slauncher.ui.construct.MultiFileItem;
+import ru.spark.slauncher.ui.construct.Navigator;
 import ru.spark.slauncher.ui.decorator.DecoratorPage;
 import ru.spark.slauncher.util.Logging;
+import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.platform.JavaVersion;
 import ru.spark.slauncher.util.platform.OperatingSystem;
@@ -40,10 +47,11 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 import static ru.spark.slauncher.ui.FXUtils.newImage;
+import static ru.spark.slauncher.ui.FXUtils.stringConverter;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class VersionSettingsPage extends StackPane implements DecoratorPage {
-    private final ReadOnlyStringWrapper title = new ReadOnlyStringWrapper();
+    private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(new State("", null, false, false, false));
 
     private VersionSetting lastVersionSetting = null;
     private Profile profile;
@@ -93,7 +101,7 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
     @FXML
     private MultiFileItem<JavaVersion> javaItem;
     @FXML
-    private MultiFileItem<EnumGameDirectory> gameDirItem;
+    private MultiFileItem<GameDirectoryType> gameDirItem;
     @FXML
     private JFXToggleButton chkShowLogs;
     @FXML
@@ -111,20 +119,21 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
     public VersionSettingsPage() {
         FXUtils.loadFXML(this, "/assets/fxml/version/version-settings.fxml");
+        addEventHandler(Navigator.NavigationEvent.NAVIGATED, this::onDecoratorPageNavigating);
 
         cboLauncherVisibility.getItems().setAll(LauncherVisibility.values());
-        cboLauncherVisibility.setConverter(FXUtils.stringConverter(e -> i18n("settings.advanced.launcher_visibility." + e.name().toLowerCase())));
+        cboLauncherVisibility.setConverter(stringConverter(e -> i18n("settings.advanced.launcher_visibility." + e.name().toLowerCase())));
     }
 
     @FXML
     private void initialize() {
-        lblPhysicalMemory.setText(i18n("settings.physical_memory") + ": " + OperatingSystem.TOTAL_MEMORY + "MB");
+        lblPhysicalMemory.setText(I18n.i18n("settings.physical_memory") + ": " + OperatingSystem.TOTAL_MEMORY + "MB");
 
         FXUtils.smoothScrolling(scroll);
 
-        Task.ofResult(JavaVersion::getJavas).thenAccept(Schedulers.javafx(), list -> {
+        Task.supplyAsync(JavaVersion::getJavas).thenAcceptAsync(Schedulers.javafx(), list -> {
             javaItem.loadChildren(list.stream()
-                    .map(javaVersion -> javaItem.createChildren(javaVersion.getVersion() + i18n("settings.game.java_directory.bit",
+                    .map(javaVersion -> javaItem.createChildren(javaVersion.getVersion() + I18n.i18n("settings.game.java_directory.bit",
                             javaVersion.getPlatform().getBit()), javaVersion.getBinary().toString(), javaVersion))
                     .collect(Collectors.toList()));
             javaItemsLoaded = true;
@@ -136,10 +145,10 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
         if (OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS)
             javaItem.getExtensionFilters().add(new FileChooser.ExtensionFilter("Java", "java.exe", "javaw.exe"));
 
-        gameDirItem.setCustomUserData(EnumGameDirectory.CUSTOM);
+        gameDirItem.setCustomUserData(GameDirectoryType.CUSTOM);
         gameDirItem.loadChildren(Arrays.asList(
-                gameDirItem.createChildren(i18n("settings.advanced.game_dir.default"), EnumGameDirectory.ROOT_FOLDER),
-                gameDirItem.createChildren(i18n("settings.advanced.game_dir.independent"), EnumGameDirectory.VERSION_FOLDER)
+                gameDirItem.createChildren(I18n.i18n("settings.advanced.game_dir.default"), GameDirectoryType.ROOT_FOLDER),
+                gameDirItem.createChildren(I18n.i18n("settings.advanced.game_dir.independent"), GameDirectoryType.VERSION_FOLDER)
         ));
 
         chkEnableSpecificSettings.selectedProperty().addListener((a, b, newValue) -> {
@@ -168,7 +177,7 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             rootPane.getChildren().remove(iconPickerItemWrapper);
             rootPane.getChildren().remove(settingsTypePane);
             chkEnableSpecificSettings.setSelected(true);
-            title.set(Profiles.getProfileDisplayName(profile) + " - " + i18n("settings.type.global.manage"));
+            state.set(State.fromTitle(Profiles.getProfileDisplayName(profile) + " - " + I18n.i18n("settings.type.global.manage")));
         }
 
         VersionSetting versionSetting = profile.getVersionSetting(versionId);
@@ -277,8 +286,8 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
         VersionSetting versionSetting = lastVersionSetting;
         if (versionSetting == null)
             return;
-        Task.ofResult(versionSetting::getJavaVersion)
-                .thenAccept(Schedulers.javafx(), javaVersion -> javaItem.setSubtitle(Optional.ofNullable(javaVersion)
+        Task.supplyAsync(versionSetting::getJavaVersion)
+                .thenAcceptAsync(Schedulers.javafx(), javaVersion -> javaItem.setSubtitle(Optional.ofNullable(javaVersion)
                         .map(JavaVersion::getBinary).map(Path::toString).orElse("Invalid Java Path")))
                 .start();
     }
@@ -294,7 +303,7 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
             return;
 
         FileChooser chooser = new FileChooser();
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("extension.png"), "*.png"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18n.i18n("extension.png"), "*.png"));
         File selectedFile = chooser.showOpenDialog(Controllers.getStage());
         if (selectedFile != null) {
             File iconFile = profile.getRepository().getVersionIconFile(versionId);
@@ -326,14 +335,14 @@ public final class VersionSettingsPage extends StackPane implements DecoratorPag
 
         File iconFile = profile.getRepository().getVersionIconFile(versionId);
         if (iconFile.exists())
-            iconPickerItem.setImage(newImage("file:" + iconFile.getAbsolutePath()));
+            iconPickerItem.setImage(new Image("file:" + iconFile.getAbsolutePath()));
         else
             iconPickerItem.setImage(newImage("/assets/img/grass.png"));
         FXUtils.limitSize(iconPickerItem.getImageView(), 32, 32);
     }
 
     @Override
-    public ReadOnlyStringProperty titleProperty() {
-        return title;
+    public ReadOnlyObjectProperty<State> stateProperty() {
+        return state.getReadOnlyProperty();
     }
 }

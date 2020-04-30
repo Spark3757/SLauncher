@@ -4,7 +4,7 @@ package ru.spark.slauncher.auth;
  * Thrown when the stored credentials has expired.
  * This exception indicates that a password login should be performed.
  *
- * @author Spark1337
+ * @author spark1337
  * @see Account#logIn()
  */
 public class CredentialExpiredException extends AuthenticationException {

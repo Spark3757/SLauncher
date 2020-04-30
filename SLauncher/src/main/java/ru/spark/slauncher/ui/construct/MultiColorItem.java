@@ -14,16 +14,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import ru.spark.slauncher.ui.FXUtils;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.util.Collection;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
-
 public class MultiColorItem extends ComponentList {
-    private final StringProperty customTitle = new SimpleStringProperty(this, "customTitle", i18n("selector.custom"));
-    private final StringProperty chooserTitle = new SimpleStringProperty(this, "chooserTitle", i18n("selector.choose_file"));
+    private final StringProperty customTitle = new SimpleStringProperty(this, "customTitle", I18n.i18n("selector.custom"));
+    private final StringProperty chooserTitle = new SimpleStringProperty(this, "chooserTitle", I18n.i18n("selector.choose_file"));
 
     private final ToggleGroup group = new ToggleGroup();
     private final JFXColorPicker colorPicker = new JFXColorPicker();
@@ -105,24 +104,24 @@ public class MultiColorItem extends ComponentList {
         return customTitle.get();
     }
 
-    public void setCustomTitle(String customTitle) {
-        this.customTitle.set(customTitle);
-    }
-
     public StringProperty customTitleProperty() {
         return customTitle;
+    }
+
+    public void setCustomTitle(String customTitle) {
+        this.customTitle.set(customTitle);
     }
 
     public String getChooserTitle() {
         return chooserTitle.get();
     }
 
-    public void setChooserTitle(String chooserTitle) {
-        this.chooserTitle.set(chooserTitle);
-    }
-
     public StringProperty chooserTitleProperty() {
         return chooserTitle;
+    }
+
+    public void setChooserTitle(String chooserTitle) {
+        this.chooserTitle.set(chooserTitle);
     }
 
     public void setCustomUserData(Object userData) {

@@ -81,6 +81,7 @@ modules.xml
 *.ipr
 *.iws
 
+/SLauncher/src/main/resources/META-INF/
 # Sonarlint plugin
 .idea/sonarlint
 

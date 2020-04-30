@@ -7,7 +7,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class GameRemoteVersions {

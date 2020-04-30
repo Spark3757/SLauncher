@@ -37,13 +37,6 @@ public class AuthlibInjectorAccount extends YggdrasilAccount {
         this.downloader = downloader;
     }
 
-    private static Arguments generateArguments(AuthlibInjectorArtifactInfo artifact, AuthlibInjectorServer server, String prefetchedMeta) {
-        return new Arguments().addJVMArguments(
-                "-javaagent:" + artifact.getLocation().toString() + "=" + server.getUrl(),
-                "-Dauthlibinjector.side=client",
-                "-Dauthlibinjector.yggdrasil.prefetched=" + Base64.getEncoder().encodeToString(prefetchedMeta.getBytes(UTF_8)));
-    }
-
     @Override
     public synchronized AuthInfo logIn() throws AuthenticationException {
         return inject(super::logIn);
@@ -103,6 +96,13 @@ public class AuthlibInjectorAccount extends YggdrasilAccount {
         }
 
         return auth.withArguments(generateArguments(artifact, server, prefetchedMeta));
+    }
+
+    private static Arguments generateArguments(AuthlibInjectorArtifactInfo artifact, AuthlibInjectorServer server, String prefetchedMeta) {
+        return new Arguments().addJVMArguments(
+                "-javaagent:" + artifact.getLocation().toString() + "=" + server.getUrl(),
+                "-Dauthlibinjector.side=client",
+                "-Dauthlibinjector.yggdrasil.prefetched=" + Base64.getEncoder().encodeToString(prefetchedMeta.getBytes(UTF_8)));
     }
 
     @Override

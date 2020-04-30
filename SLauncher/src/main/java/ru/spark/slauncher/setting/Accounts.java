@@ -11,8 +11,6 @@ import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.AccountFactory;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.authlibinjector.*;
-import ru.spark.slauncher.auth.ely.ElyAccount;
-import ru.spark.slauncher.auth.ely.ElyAccountFactory;
 import ru.spark.slauncher.auth.offline.OfflineAccount;
 import ru.spark.slauncher.auth.offline.OfflineAccountFactory;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilAccount;
@@ -25,6 +23,7 @@ import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.i18n.I18n;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,12 +34,11 @@ import static java.util.stream.Collectors.toList;
 import static javafx.collections.FXCollections.observableArrayList;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class Accounts {
     public static final OfflineAccountFactory FACTORY_OFFLINE = OfflineAccountFactory.INSTANCE;
     public static final YggdrasilAccountFactory FACTORY_MOJANG = YggdrasilAccountFactory.MOJANG;
-    public static final ElyAccountFactory FACTORY_ELY = ElyAccountFactory.ELY;
     public static final AuthlibInjectorAccountFactory FACTORY_AUTHLIB_INJECTOR = new AuthlibInjectorAccountFactory(createAuthlibInjectorArtifactProvider(), Accounts::getOrCreateAuthlibInjectorServer);
     // ==== login type / account factory mapping ====
     private static final Map<String, AccountFactory<?>> type2factory = new HashMap<>();
@@ -90,13 +88,11 @@ public final class Accounts {
     private static Map<AccountFactory<?>, String> unlocalizedLoginTypeNames = Lang.mapOf(
             Pair.pair(Accounts.FACTORY_OFFLINE, "account.methods.offline"),
             Pair.pair(Accounts.FACTORY_MOJANG, "account.methods.yggdrasil"),
-            Pair.pair(Accounts.FACTORY_ELY, "account.methods.ely"),
             Pair.pair(Accounts.FACTORY_AUTHLIB_INJECTOR, "account.methods.authlib_injector"));
 
     static {
         type2factory.put("offline", FACTORY_OFFLINE);
         type2factory.put("yggdrasil", FACTORY_MOJANG);
-        type2factory.put("ely", FACTORY_ELY);
         type2factory.put("authlibInjector", FACTORY_AUTHLIB_INJECTOR);
 
         type2factory.forEach((type, factory) -> factory2type.put(factory, type));
@@ -126,8 +122,6 @@ public final class Accounts {
             return FACTORY_AUTHLIB_INJECTOR;
         else if (account instanceof YggdrasilAccount)
             return FACTORY_MOJANG;
-        else if (account instanceof ElyAccount)
-            return FACTORY_ELY;
         else
             throw new IllegalArgumentException("Failed to determine account type: " + account);
     }
@@ -184,7 +178,7 @@ public final class Accounts {
 
         Account selected = selectedAccount.get();
         if (selected != null) {
-            Schedulers.io().schedule(() -> {
+            Schedulers.io().execute(() -> {
                 try {
                     selected.logIn();
                 } catch (AuthenticationException e) {
@@ -196,7 +190,7 @@ public final class Accounts {
         for (AuthlibInjectorServer server : ConfigHolder.config().getAuthlibInjectorServers()) {
             if (selected instanceof AuthlibInjectorAccount && ((AuthlibInjectorAccount) selected).getServer() == server)
                 continue;
-            Schedulers.io().schedule(() -> {
+            Schedulers.io().execute(() -> {
                 try {
                     server.fetchMetadataResponse();
                 } catch (IOException e) {
@@ -230,7 +224,12 @@ public final class Accounts {
     private static AuthlibInjectorArtifactProvider createAuthlibInjectorArtifactProvider() {
         String authlibinjectorLocation = System.getProperty("slauncher.authlibinjector.location");
         if (authlibinjectorLocation == null) {
-            return new AuthlibInjectorDownloader(Metadata.SLauncher_DIRECTORY, DownloadProviders::getDownloadProvider);
+            Path currentDirectory = Paths.get(".");
+            Path artifactsDirectory = AuthlibInjectorDownloader.isArtifactsDirectory(currentDirectory)
+                    ? currentDirectory
+                    : Metadata.SL_DIRECTORY;
+
+            return new AuthlibInjectorDownloader(artifactsDirectory, DownloadProviders::getDownloadProvider);
         } else {
             Logging.LOG.info("Using specified authlib-injector: " + authlibinjectorLocation);
             return new SimpleAuthlibInjectorArtifactProvider(Paths.get(authlibinjectorLocation));

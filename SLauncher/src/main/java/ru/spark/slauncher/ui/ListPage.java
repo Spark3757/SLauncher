@@ -22,11 +22,11 @@ public abstract class ListPage<T extends Node> extends ListPageBase<T> {
         return refreshable.get();
     }
 
-    public void setRefreshable(boolean refreshable) {
-        this.refreshable.set(refreshable);
-    }
-
     public BooleanProperty refreshableProperty() {
         return refreshable;
+    }
+
+    public void setRefreshable(boolean refreshable) {
+        this.refreshable.set(refreshable);
     }
 }

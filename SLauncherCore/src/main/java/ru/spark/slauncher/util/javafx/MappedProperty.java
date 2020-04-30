@@ -9,7 +9,7 @@ import javafx.beans.value.ObservableValue;
 import java.util.function.Function;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class MappedProperty<T, U> extends SimpleObjectProperty<U> {
 

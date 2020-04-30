@@ -6,11 +6,10 @@ import javafx.scene.control.Skin;
 import ru.spark.slauncher.game.World;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.ui.wizard.WizardSinglePage;
+import ru.spark.slauncher.util.i18n.I18n;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class WorldExportPage extends WizardSinglePage {
     private final StringProperty path = new SimpleStringProperty();
@@ -52,11 +51,11 @@ public class WorldExportPage extends WizardSinglePage {
 
     @Override
     public String getTitle() {
-        return i18n("world.export.wizard", world.getFileName());
+        return I18n.i18n("world.export.wizard", world.getFileName());
     }
 
     @Override
     protected Object finish() {
-        return Task.of(i18n("world.export.wizard", worldName.get()), () -> world.export(Paths.get(path.get()), worldName.get()));
+        return Task.runAsync(I18n.i18n("world.export.wizard", worldName.get()), () -> world.export(Paths.get(path.get()), worldName.get()));
     }
 }

@@ -9,7 +9,7 @@ import java.util.Collections;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class LiteLoaderBranch {

@@ -1,6 +1,7 @@
 package ru.spark.slauncher.download;
 
 import com.google.gson.JsonParseException;
+import org.jetbrains.annotations.NotNull;
 import ru.spark.slauncher.download.game.LibraryDownloadTask;
 import ru.spark.slauncher.game.Library;
 import ru.spark.slauncher.game.LibraryDownloadInfo;
@@ -9,6 +10,8 @@ import ru.spark.slauncher.util.DigestUtils;
 import ru.spark.slauncher.util.Hex;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.gson.JsonUtils;
+import ru.spark.slauncher.util.gson.TolerableValidationException;
+import ru.spark.slauncher.util.gson.Validation;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.platform.OperatingSystem;
 
@@ -23,9 +26,9 @@ import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 public class DefaultCacheRepository extends CacheRepository {
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private Path librariesDir;
     private Path indexFile;
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private Index index = null;
 
     public DefaultCacheRepository() {
@@ -46,7 +49,7 @@ public class DefaultCacheRepository extends CacheRepository {
         lock.writeLock().lock();
         try {
             if (Files.isRegularFile(indexFile))
-                index = JsonUtils.GSON.fromJson(FileUtils.readText(indexFile.toFile()), Index.class);
+                index = JsonUtils.fromNonNullJson(FileUtils.readText(indexFile.toFile()), Index.class);
             else
                 index = new Index();
         } catch (IOException | JsonParseException e) {
@@ -200,7 +203,7 @@ public class DefaultCacheRepository extends CacheRepository {
      * // assets and versions will not be included in index.
      * }
      */
-    private class Index {
+    private class Index implements Validation {
         private final Set<LibraryIndex> libraries;
 
         public Index() {
@@ -208,23 +211,28 @@ public class DefaultCacheRepository extends CacheRepository {
         }
 
         public Index(Set<LibraryIndex> libraries) {
-            this.libraries = libraries;
+            this.libraries = Objects.requireNonNull(libraries);
         }
 
+        @NotNull
         public Set<LibraryIndex> getLibraries() {
             return libraries;
         }
+
+        @Override
+        public void validate() throws JsonParseException, TolerableValidationException {
+            if (libraries == null)
+                throw new JsonParseException("Index.libraries cannot be null");
+        }
     }
 
-    private class LibraryIndex {
-        public static final String TYPE_FORGE = "forge";
-        public static final String TYPE_JAR = "jar";
+    private class LibraryIndex implements Validation {
         private final String name;
         private final String hash;
         private final String type;
 
         public LibraryIndex() {
-            this(null, null, null);
+            this("", "", "");
         }
 
         public LibraryIndex(String name, String hash, String type) {
@@ -233,16 +241,25 @@ public class DefaultCacheRepository extends CacheRepository {
             this.type = type;
         }
 
+        @NotNull
         public String getName() {
             return name;
         }
 
+        @NotNull
         public String getHash() {
             return hash;
         }
 
+        @NotNull
         public String getType() {
             return type;
+        }
+
+        @Override
+        public void validate() throws JsonParseException, TolerableValidationException {
+            if (name == null || hash == null || type == null)
+                throw new JsonParseException("Index.LibraryIndex.* cannot be null");
         }
 
         @Override
@@ -259,5 +276,8 @@ public class DefaultCacheRepository extends CacheRepository {
         public int hashCode() {
             return Objects.hash(name, hash, type);
         }
+
+        public static final String TYPE_FORGE = "forge";
+        public static final String TYPE_JAR = "jar";
     }
 }

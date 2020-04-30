@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class LiteLoaderVersion {

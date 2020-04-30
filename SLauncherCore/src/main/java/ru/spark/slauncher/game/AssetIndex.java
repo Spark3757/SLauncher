@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public final class AssetIndex {
 

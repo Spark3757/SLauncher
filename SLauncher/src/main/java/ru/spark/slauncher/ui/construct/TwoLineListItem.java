@@ -36,24 +36,24 @@ public class TwoLineListItem extends VBox {
         return title.get();
     }
 
-    public void setTitle(String title) {
-        this.title.set(title);
-    }
-
     public StringProperty titleProperty() {
         return title;
+    }
+
+    public void setTitle(String title) {
+        this.title.set(title);
     }
 
     public String getSubtitle() {
         return subtitle.get();
     }
 
-    public void setSubtitle(String subtitle) {
-        this.subtitle.set(subtitle);
-    }
-
     public StringProperty subtitleProperty() {
         return subtitle;
+    }
+
+    public void setSubtitle(String subtitle) {
+        this.subtitle.set(subtitle);
     }
 
     @Override

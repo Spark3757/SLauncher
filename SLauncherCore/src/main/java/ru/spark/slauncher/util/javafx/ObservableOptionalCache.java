@@ -8,7 +8,7 @@ import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 public class ObservableOptionalCache<K, V, E extends Exception> {
 

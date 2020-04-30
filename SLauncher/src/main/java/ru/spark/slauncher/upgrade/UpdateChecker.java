@@ -17,6 +17,8 @@ import ru.spark.slauncher.util.versioning.VersionNumber;
 import java.io.IOException;
 import java.util.logging.Level;
 
+import static ru.spark.slauncher.setting.ConfigHolder.config;
+
 public final class UpdateChecker {
     private static ObjectProperty<RemoteVersion> latestVersion = new SimpleObjectProperty<>();
     private static BooleanBinding outdated = Bindings.createBooleanBinding(
@@ -64,10 +66,6 @@ public final class UpdateChecker {
     }
 
     private static RemoteVersion checkUpdate(UpdateChannel channel) throws IOException {
-        if (!IntegrityChecker.isSelfVerified() && !"true".equals(System.getProperty("slauncher.self_integrity_check.disable"))) {
-            throw new IOException("Self verification failed");
-        }
-
         String url = NetworkUtils.withQuery(Metadata.UPDATE_URL, Lang.mapOf(
                 Pair.pair("version", Metadata.VERSION),
                 Pair.pair("channel", channel.channelName)));
@@ -85,7 +83,7 @@ public final class UpdateChecker {
             if (isCheckingUpdate())
                 return;
             checkingUpdate.set(true);
-            UpdateChannel channel = ConfigHolder.config().getUpdateChannel();
+            UpdateChannel channel = config().getUpdateChannel();
 
             Lang.thread(() -> {
                 RemoteVersion result = null;
@@ -100,7 +98,7 @@ public final class UpdateChecker {
                 Platform.runLater(() -> {
                     checkingUpdate.set(false);
                     if (finalResult != null) {
-                        if (channel.equals(ConfigHolder.config().getUpdateChannel())) {
+                        if (channel.equals(config().getUpdateChannel())) {
                             latestVersion.set(finalResult);
                         } else {
                             // the channel has been changed during the period

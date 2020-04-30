@@ -11,7 +11,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 /**
- * @author Spark1337
+ * @author spark1337
  */
 @Immutable
 public final class LiteModMetadata {
@@ -43,19 +43,6 @@ public final class LiteModMetadata {
         this.modpackVersion = modpackVersion;
         this.checkUpdateUrl = checkUpdateUrl;
         this.updateURI = updateURI;
-    }
-
-    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
-        try (ZipFile zipFile = new ZipFile(modFile)) {
-            ZipEntry entry = zipFile.getEntry("litemod.json");
-            if (entry == null)
-                throw new IOException("File " + modFile + "is not a LiteLoader mod.");
-            LiteModMetadata metadata = JsonUtils.GSON.fromJson(IOUtils.readFullyAsString(zipFile.getInputStream(entry)), LiteModMetadata.class);
-            if (metadata == null)
-                throw new IOException("Mod " + modFile + " `litemod.json` is malformed.");
-            return new ModInfo(modManager, modFile, metadata.getName(), metadata.getDescription(), metadata.getAuthor(),
-                    metadata.getVersion(), metadata.getGameVersion(), metadata.getUpdateURI());
-        }
     }
 
     public String getName() {
@@ -100,6 +87,19 @@ public final class LiteModMetadata {
 
     public String getUpdateURI() {
         return updateURI;
+    }
+
+    public static ModInfo fromFile(ModManager modManager, File modFile) throws IOException, JsonParseException {
+        try (ZipFile zipFile = new ZipFile(modFile)) {
+            ZipEntry entry = zipFile.getEntry("litemod.json");
+            if (entry == null)
+                throw new IOException("File " + modFile + "is not a LiteLoader mod.");
+            LiteModMetadata metadata = JsonUtils.GSON.fromJson(IOUtils.readFullyAsString(zipFile.getInputStream(entry)), LiteModMetadata.class);
+            if (metadata == null)
+                throw new IOException("Mod " + modFile + " `litemod.json` is malformed.");
+            return new ModInfo(modManager, modFile, metadata.getName(), metadata.getDescription(), metadata.getAuthor(),
+                    metadata.getVersion(), metadata.getGameVersion(), metadata.getUpdateURI());
+        }
     }
 
 }

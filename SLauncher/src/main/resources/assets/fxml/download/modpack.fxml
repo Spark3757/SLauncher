@@ -8,8 +8,8 @@
 <?import ru.spark.slauncher.ui.construct.ComponentList?>
 <?import ru.spark.slauncher.ui.construct.SpinnerPane?>
 <?import ru.spark.slauncher.ui.FXUtils?>
-<fx:root xmlns:fx="http://javafx.com/fxml"
-         xmlns="http://javafx.com/javafx"
+<fx:root xmlns="http://javafx.com/javafx"
+         xmlns:fx="http://javafx.com/fxml"
          type="StackPane">
     <fx:define>
         <Insets fx:id="insets" bottom="12"/>
@@ -56,7 +56,7 @@
                 </BorderPane>
                 <BorderPane>
                     <left>
-                        <JFXButton fx:id="btnDescription" onMouseClicked="#onDescribe" text="%modpack.wizard.step.3"
+                        <JFXButton fx:id="btnDescription" onMouseClicked="#onDescribe" text="%modpack.description"
                                    styleClass="jfx-button-border"/>
                     </left>
                     <right>
