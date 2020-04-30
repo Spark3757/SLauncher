@@ -61,7 +61,7 @@ public abstract class ToolbarListPageSkin<T extends ListPageBase<? extends Node>
 
     public static Node wrap(Node node) {
         StackPane stackPane = new StackPane();
-        stackPane.setPadding(new Insets(0, 5, 0, 2));
+        stackPane.setPadding(new Insets(0, 5, 0, 0));
         stackPane.getChildren().setAll(node);
         return stackPane;
     }
@@ -72,6 +72,7 @@ public abstract class ToolbarListPageSkin<T extends ListPageBase<? extends Node>
         ret.textFillProperty().bind(Theme.foregroundFillBinding());
         ret.setGraphic(wrap(creator.createIcon(Theme.foregroundFillBinding(), -1, -1)));
         ret.setText(text);
+        ret.setPadding(new Insets(0, 5, 0, 5));
         ret.setOnMouseClicked(e -> onClick.run());
         return ret;
     }

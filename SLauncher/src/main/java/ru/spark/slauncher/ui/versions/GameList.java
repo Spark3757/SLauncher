@@ -117,6 +117,7 @@ public class GameList extends ListPageBase<GameListItem> implements DecoratorPag
                     createToolbarButton(I18n.i18n("button.refresh"), SVG::refresh, GameList::refreshList),
                     createToolbarButton(I18n.i18n("settings.type.global.manage"), SVG::gear, GameList.this::modifyGlobalGameSettings)
             );
+            hbox.setSpacing(0);
             hbox.setPickOnBounds(false);
 
             state.set(new State(I18n.i18n("version.manage"), hbox, true, false, true));

@@ -6,6 +6,7 @@ import com.jfoenix.controls.JFXListView;
 import com.jfoenix.controls.JFXPopup;
 import javafx.application.Platform;
 import javafx.beans.property.*;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
@@ -268,12 +269,15 @@ public class VersionPage extends Control implements DecoratorPage {
                 root.setLeft(left);
 
                 JFXButton btnAddGame = ToolbarListPageSkin.createToolbarButton(null, SVG::plus, GameList::addNewGame);
+                btnAddGame.setPadding(new Insets(0, 10, 0, 10));
                 FXUtils.installFastTooltip(btnAddGame, new Tooltip(I18n.i18n("install.new_game")));
 
                 JFXButton btnImportModpack = ToolbarListPageSkin.createToolbarButton(null, SVG::importIcon, GameList::importModpack);
+                btnImportModpack.setPadding(new Insets(0, 10, 0, 10));
                 FXUtils.installFastTooltip(btnImportModpack, new Tooltip(I18n.i18n("install.modpack")));
 
                 JFXButton btnRefresh = ToolbarListPageSkin.createToolbarButton(null, SVG::refresh, GameList::refreshList);
+                btnRefresh.setPadding(new Insets(0, 10, 0, 10));
                 FXUtils.installFastTooltip(btnRefresh, new Tooltip(I18n.i18n("button.refresh")));
 
                 HBox toolbar = new HBox();
