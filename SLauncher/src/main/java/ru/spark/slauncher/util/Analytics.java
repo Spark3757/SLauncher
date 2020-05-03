@@ -46,7 +46,6 @@ public class Analytics {
         Sentry.getContext().addTag("locale", ConfigHolder.config().getLocalization().getLocale().toLanguageTag());
         Sentry.getContext().addTag("version", Metadata.VERSION);
 
-
         Sentry.getStoredClient().sendEvent(
                 new EventBuilder().
                         withMessage("launcher_start").
@@ -64,15 +63,12 @@ public class Analytics {
         Sentry.getContext().addTag("version", Metadata.VERSION);
         Sentry.getContext().addTag("mc_version", version.getId());
 
-
-
         Sentry.getStoredClient().sendEvent(
                 new EventBuilder().
-                        withRelease(Metadata.VERSION).
-                        withLevel(Event.Level.INFO).
-                        withServerName(System.getenv("COMPUTERNAME")).
                         withMessage("version_launch").
-                        build());
+                        withRelease(Metadata.VERSION).
+                        withServerName(System.getenv("COMPUTERNAME")).
+                        withLevel(Event.Level.INFO));
     }
 
     public static void recordLauncherUpgrade(RemoteVersion remoteVersion) {
@@ -84,13 +80,12 @@ public class Analytics {
         Sentry.getContext().addTag("version", Metadata.VERSION);
         Sentry.getContext().addTag("remote_version", remoteVersion.getVersion());
 
-
         Sentry.getStoredClient().sendEvent(
                 new EventBuilder().
+                        withMessage("launcher_upgrade").
                         withRelease(Metadata.VERSION).
                         withLevel(Event.Level.INFO).
                         withServerName(System.getenv("COMPUTERNAME")).
-                        withMessage("launcher_upgrade").
                         build());
     }
 
@@ -112,10 +107,10 @@ public class Analytics {
 
         Sentry.getStoredClient().sendEvent(
                 new EventBuilder().
+                        withMessage("launcher_crashed").
                         withRelease(Metadata.VERSION).
                         withLevel(Event.Level.ERROR).
                         withServerName(System.getenv("COMPUTERNAME")).
-                        withMessage("launcher_crashed").
                         build());
     }
 
