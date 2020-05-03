@@ -1,13 +1,22 @@
 package ru.spark.slauncher.download;
 
+import ru.spark.slauncher.download.LibraryAnalyzer.LibraryType;
 import ru.spark.slauncher.game.*;
 import ru.spark.slauncher.task.Task;
+import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.SimpleMultimap;
 import ru.spark.slauncher.util.gson.JsonUtils;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
+
+import static ru.spark.slauncher.download.LibraryAnalyzer.LibraryType.*;
 
 public class MaintainTask extends Task<Version> {
     private final GameRepository repository;
@@ -32,13 +41,15 @@ public class MaintainTask extends Task<Version> {
 
         String mainClass = version.resolve(null).getMainClass();
 
-        if (mainClass != null && mainClass.contains("launchwrapper")) {
-            return maintainOptiFineLibrary(repository, maintainGameWithLaunchWrapper(unique(version), true));
+        if (mainClass != null && mainClass.equals(LibraryAnalyzer.LAUNCH_WRAPPER_MAIN)) {
+            return maintainOptiFineLibrary(repository, maintainGameWithLaunchWrapper(unique(version), true), false);
+        } else if (mainClass != null && mainClass.equals(LibraryAnalyzer.MOD_LAUNCHER_MAIN)) {
+            // Forge 1.13 and OptiFine
+            return maintainOptiFineLibrary(repository, maintainGameWithModLauncher(repository, unique(version)), true);
         } else {
             // Vanilla Minecraft does not need maintain
-            // Forge 1.13 support not implemented, not compatible with OptiFine currently.
             // Fabric does not need maintain, nothing compatible with fabric now.
-            return maintainOptiFineLibrary(repository, unique(version));
+            return maintainOptiFineLibrary(repository, unique(version), false);
         }
     }
 
@@ -54,20 +65,20 @@ public class MaintainTask extends Task<Version> {
         VersionLibraryBuilder builder = new VersionLibraryBuilder(version);
         String mainClass = null;
 
-        if (!libraryAnalyzer.has(LibraryAnalyzer.LibraryType.FORGE)) {
+        if (!libraryAnalyzer.has(FORGE)) {
             builder.removeTweakClass("forge");
         }
 
         // Installing Forge will override the Minecraft arguments in json, so LiteLoader and OptiFine Tweaker are being re-added.
 
-        if (libraryAnalyzer.has(LibraryAnalyzer.LibraryType.LITELOADER) && !libraryAnalyzer.hasModLauncher()) {
+        if (libraryAnalyzer.has(LITELOADER) && !libraryAnalyzer.hasModLauncher()) {
             builder.replaceTweakClass("liteloader", "com.mumfrey.liteloader.launch.LiteLoaderTweaker", !reorderTweakClass);
         } else {
             builder.removeTweakClass("liteloader");
         }
 
-        if (libraryAnalyzer.has(LibraryAnalyzer.LibraryType.OPTIFINE)) {
-            if (!libraryAnalyzer.has(LibraryAnalyzer.LibraryType.LITELOADER) && !libraryAnalyzer.has(LibraryAnalyzer.LibraryType.FORGE)) {
+        if (libraryAnalyzer.has(OPTIFINE)) {
+            if (!libraryAnalyzer.has(LITELOADER) && !libraryAnalyzer.has(FORGE)) {
                 builder.replaceTweakClass("optifine", "optifine.OptiFineTweaker", !reorderTweakClass);
             } else {
                 if (libraryAnalyzer.hasModLauncher()) {
@@ -88,12 +99,39 @@ public class MaintainTask extends Task<Version> {
         return mainClass == null ? ret : ret.setMainClass(mainClass);
     }
 
-    private static Version maintainOptiFineLibrary(GameRepository repository, Version version) {
+    private static Version maintainGameWithModLauncher(GameRepository repository, Version version) {
+        LibraryAnalyzer libraryAnalyzer = LibraryAnalyzer.analyze(version);
+        VersionLibraryBuilder builder = new VersionLibraryBuilder(version);
+
+        if (!libraryAnalyzer.has(FORGE)) return version;
+
+        if (libraryAnalyzer.has(OPTIFINE)) {
+            Library hmclTransformerDiscoveryService = new Library(new Artifact("ru.spark.slauncher", "transformer-discovery-service", "1.0"));
+            Optional<Library> optiFine = version.getLibraries().stream().filter(library -> library.is("optifine", "OptiFine")).findAny();
+            boolean libraryExisting = version.getLibraries().stream().anyMatch(library -> library.is("ru.spark.slauncher", "transformer-discovery-service"));
+            optiFine.ifPresent(library -> {
+                builder.addJvmArgument("-Dslauncher.transformer.candidates=${libraries_directory}/" + library.getPath());
+                if (!libraryExisting) builder.addLibrary(hmclTransformerDiscoveryService);
+                Path libraryPath = repository.getLibraryFile(version, hmclTransformerDiscoveryService).toPath();
+                try {
+                    Files.createDirectories(libraryPath.getParent());
+                    Files.copy(MaintainTask.class.getResourceAsStream("/assets/game/SLauncherTransformerDiscoveryService-1.0.jar"),
+                            libraryPath, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    Logging.LOG.log(Level.WARNING, "Unable to unpack SLauncherTransformerDiscoveryService", e);
+                }
+            });
+        }
+
+        return builder.build();
+    }
+
+    private static Version maintainOptiFineLibrary(GameRepository repository, Version version, boolean remove) {
         LibraryAnalyzer libraryAnalyzer = LibraryAnalyzer.analyze(version);
         List<Library> libraries = new ArrayList<>(version.getLibraries());
 
-        if (libraryAnalyzer.has(LibraryAnalyzer.LibraryType.OPTIFINE)) {
-            if (libraryAnalyzer.has(LibraryAnalyzer.LibraryType.LITELOADER) || libraryAnalyzer.has(LibraryAnalyzer.LibraryType.FORGE)) {
+        if (libraryAnalyzer.has(OPTIFINE)) {
+            if (libraryAnalyzer.has(LITELOADER) || libraryAnalyzer.has(FORGE)) {
                 // If forge or LiteLoader installed, OptiFine Forge Tweaker is needed.
                 // And we should load the installer jar instead of patch jar.
                 if (repository != null) {
@@ -107,7 +145,7 @@ public class MaintainTask extends Task<Version> {
                                 // Although we have altered priority of OptiFine higher than Forge,
                                 // there still exists a situation that Forge is installed without patch.
                                 // Here we manually alter the position of OptiFine library in classpath.
-                                libraries.add(newLibrary);
+                                if (!remove) libraries.add(newLibrary);
                             }
                         }
 

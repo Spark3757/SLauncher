@@ -1,4 +1,4 @@
 rootProject.name = 'SLauncher'
 include 'SLauncher'
 include 'SLauncherCore'
-
+include 'SLauncherTransformerDiscoveryService'

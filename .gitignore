@@ -99,7 +99,6 @@ modules.xml
 .mtj.tmp/
 
 # Package Files #
-*.jar
 *.war
 *.nar
 *.ear
@@ -124,17 +123,20 @@ NVIDIA
 /build/
 /SLauncher/build/
 /SLauncherCore/build/
+/SLauncherTransformerDiscoveryService/build/
 
 # idea
 .idea
 /out/
 /SLauncher/out/
 /SLauncherCore/out/
+/SLauncherTransformerDiscoveryService/out/
 
 # eclipse
 /bin/
 /SLauncher/bin/
 /SLauncherCore/bin/
+/SLauncherTransformerDiscoveryService/bin/
 .classpath
 .project
 .settings

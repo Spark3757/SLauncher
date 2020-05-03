@@ -3,6 +3,7 @@ package ru.spark.slauncher.game;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import javafx.scene.image.Image;
+import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.mod.Modpack;
 import ru.spark.slauncher.setting.Profile;
 import ru.spark.slauncher.setting.VersionSetting;
@@ -204,9 +205,9 @@ public class SLGameRepository extends DefaultGameRepository {
         if (iconFile.exists())
             return new Image("file:" + iconFile.getAbsolutePath());
         else if (version.getMainClass() != null &&
-                ("net.minecraft.launchwrapper.Launch".equals(version.getMainClass())
+                (LibraryAnalyzer.LAUNCH_WRAPPER_MAIN.equals(version.getMainClass())
                         || version.getMainClass().startsWith("net.fabricmc")
-                        || "cpw.mods.modlauncher.Launcher".equals(version.getMainClass())))
+                        || LibraryAnalyzer.MOD_LAUNCHER_MAIN.equals(version.getMainClass())))
             return FXUtils.newImage("/assets/img/furnace.png");
         else
             return FXUtils.newImage("/assets/img/grass.png");

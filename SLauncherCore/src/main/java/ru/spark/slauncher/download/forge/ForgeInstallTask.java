@@ -2,6 +2,7 @@ package ru.spark.slauncher.download.forge;
 
 import ru.spark.slauncher.download.DefaultDependencyManager;
 import ru.spark.slauncher.download.DependencyManager;
+import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.VersionMismatchException;
 import ru.spark.slauncher.download.optifine.OptiFineInstallTask;
 import ru.spark.slauncher.game.GameVersion;
@@ -86,7 +87,7 @@ public final class ForgeInstallTask extends Task<Version> {
         String originalMainClass = version.resolve(dependencyManager.getGameRepository()).getMainClass();
         if (VersionNumber.VERSION_COMPARATOR.compare("1.13", remote.getGameVersion()) <= 0) {
             // Forge 1.13 is not compatible with any other libraries.
-            if (!"net.minecraft.client.main.Main".equals(originalMainClass) && !"cpw.mods.modlauncher.Launcher".equals(originalMainClass))
+            if (!LibraryAnalyzer.VANILLA_MAIN.equals(originalMainClass) && !LibraryAnalyzer.MOD_LAUNCHER_MAIN.equals(originalMainClass) && !LibraryAnalyzer.LAUNCH_WRAPPER_MAIN.equals(originalMainClass))
                 throw new OptiFineInstallTask.UnsupportedOptiFineInstallationException();
         } else {
             // Forge 1.12 and older versions is compatible with vanilla and launchwrapper.

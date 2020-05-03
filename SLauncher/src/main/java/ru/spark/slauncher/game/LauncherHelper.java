@@ -7,6 +7,7 @@ import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.auth.*;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorDownloadException;
 import ru.spark.slauncher.download.DefaultDependencyManager;
+import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.MaintainTask;
 import ru.spark.slauncher.download.game.GameAssetIndexDownloadTask;
 import ru.spark.slauncher.download.game.LibraryDownloadException;
@@ -50,6 +51,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 
+import static ru.spark.slauncher.util.i18n.I18n.*;
+
 public final class LauncherHelper {
 
     public static final Queue<ManagedProcess> PROCESSES = new ConcurrentLinkedQueue<>();
@@ -70,7 +73,7 @@ public final class LauncherHelper {
         this.setting = profile.getVersionSetting(selectedVersion);
         this.launcherVisibility = setting.getLauncherVisibility();
         this.showLogs = setting.isShowLogs();
-        this.launchingStepsPane.setTitle(I18n.i18n("version.launch"));
+        this.launchingStepsPane.setTitle(i18n("version.launch"));
     }
 
     private static void checkGameState(Profile profile, VersionSetting setting, Version version, Runnable onAccept) throws InterruptedException {
@@ -88,7 +91,7 @@ public final class LauncherHelper {
         VersionNumber gameVersion = VersionNumber.asVersion(GameVersion.minecraftVersion(profile.getRepository().getVersionJar(version)).orElse("Unknown"));
         JavaVersion java = setting.getJavaVersion();
         if (java == null) {
-            Controllers.dialog(I18n.i18n("launch.wrong_javadir"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
+            Controllers.dialog(i18n("launch.wrong_javadir"), i18n("message.warning"), MessageType.WARNING, onAccept);
             setting.setJava(null);
             setting.setDefaultJavaPath(null);
             java = JavaVersion.fromCurrentEnvironment();
@@ -107,10 +110,10 @@ public final class LauncherHelper {
                 if (gameVersion.compareTo(VersionNumber.asVersion("1.13")) >= 0) {
                     // Minecraft 1.13 and later versions only support Java 8 or later.
                     // Terminate launching operation.
-                    Controllers.dialog(I18n.i18n("launch.advice.java8_1_13"), I18n.i18n("message.error"), MessageType.ERROR, null);
+                    Controllers.dialog(i18n("launch.advice.java8_1_13"), i18n("message.error"), MessageType.ERROR, null);
                 } else {
                     // Most mods require Java 8 or later version.
-                    Controllers.dialog(I18n.i18n("launch.advice.newer_java"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
+                    Controllers.dialog(i18n("launch.advice.newer_java"), i18n("message.warning"), MessageType.WARNING, onAccept);
                 }
                 flag = true;
             }
@@ -118,7 +121,7 @@ public final class LauncherHelper {
 
         // LaunchWrapper 1.12 will crash because of assuming the system class loader is an instance of URLClassLoader.
         if (!flag && java.getParsedVersion() >= JavaVersion.JAVA_9_AND_LATER
-                && version.getMainClass().contains("launchwrapper")
+                && version.getMainClass().equals(LibraryAnalyzer.LAUNCH_WRAPPER_MAIN)
                 && version.getLibraries().stream()
                 .filter(library -> "launchwrapper".equals(library.getArtifactId()))
                 .anyMatch(library -> VersionNumber.asVersion(library.getVersion()).compareTo(VersionNumber.asVersion("1.13")) < 0)) {
@@ -126,10 +129,10 @@ public final class LauncherHelper {
             if (java8.isPresent()) {
                 java8required = true;
                 setting.setJavaVersion(java8.get());
-                Controllers.dialog(I18n.i18n("launch.advice.java9") + "\n" + I18n.i18n("launch.advice.corrected"), I18n.i18n("message.info"), MessageType.INFORMATION, onAccept);
+                Controllers.dialog(i18n("launch.advice.java9") + "\n" + i18n("launch.advice.corrected"), i18n("message.info"), MessageType.INFORMATION, onAccept);
                 flag = true;
             } else {
-                Controllers.dialog(I18n.i18n("launch.advice.java9") + "\n" + I18n.i18n("launch.advice.uncorrected"), I18n.i18n("message.error"), MessageType.ERROR, null);
+                Controllers.dialog(i18n("launch.advice.java9") + "\n" + i18n("launch.advice.uncorrected"), i18n("message.error"), MessageType.ERROR, null);
                 flag = true;
             }
         }
@@ -144,7 +147,7 @@ public final class LauncherHelper {
                 newJavaRequired = true;
                 setting.setJavaVersion(java8.get());
             } else {
-                Controllers.dialog(I18n.i18n("launch.advice.java8_51_1_13"), I18n.i18n("message.warning"), MessageType.WARNING, onAccept);
+                Controllers.dialog(i18n("launch.advice.java8_51_1_13"), i18n("message.warning"), MessageType.WARNING, onAccept);
                 flag = true;
             }
         }
@@ -176,7 +179,7 @@ public final class LauncherHelper {
             if (java64.isPresent()) {
                 setting.setJavaVersion(java64.get());
             } else {
-                Controllers.dialog(I18n.i18n("launch.advice.different_platform"), I18n.i18n("message.error"), MessageType.ERROR, onAccept);
+                Controllers.dialog(i18n("launch.advice.different_platform"), i18n("message.error"), MessageType.ERROR, onAccept);
                 flag = true;
             }
         }
@@ -186,13 +189,13 @@ public final class LauncherHelper {
                 setting.getMaxMemory() > 1.5 * 1024) {
             // 1.5 * 1024 is an inaccurate number.
             // Actual memory limit depends on operating system and memory.
-            Controllers.confirm(I18n.i18n("launch.advice.too_large_memory_for_32bit"), I18n.i18n("message.error"), onAccept, null);
+            Controllers.confirm(i18n("launch.advice.too_large_memory_for_32bit"), i18n("message.error"), onAccept, null);
             flag = true;
         }
 
         // Cannot allocate too much memory exceeding free space.
         if (!flag && OperatingSystem.TOTAL_MEMORY > 0 && OperatingSystem.TOTAL_MEMORY < setting.getMaxMemory()) {
-            Controllers.confirm(I18n.i18n("launch.advice.not_enough_space", OperatingSystem.TOTAL_MEMORY), I18n.i18n("message.error"), onAccept, null);
+            Controllers.confirm(i18n("launch.advice.not_enough_space", OperatingSystem.TOTAL_MEMORY), i18n("message.error"), onAccept, null);
             flag = true;
         }
 
@@ -204,10 +207,23 @@ public final class LauncherHelper {
                                     VersionNumber.VERSION_COMPARATOR.compare(it.getVersion(), "1.12.2-14.23.5.2773") < 0);
             boolean hasLiteLoader = version.getLibraries().stream().anyMatch(it -> it.is("com.mumfrey", "liteloader"));
             if (hasForge2760 && hasLiteLoader && gameVersion.compareTo(VersionNumber.asVersion("1.12.2")) == 0) {
-                Controllers.confirm(I18n.i18n("launch.advice.forge2760_liteloader"), I18n.i18n("message.error"), onAccept, null);
+                Controllers.confirm(i18n("launch.advice.forge2760_liteloader"), i18n("message.error"), onAccept, null);
                 flag = true;
             }
         }
+
+        // OptiFine 1.14.4 is not compatible with Forge 28.2.2 and later versions.
+        if (!flag) {
+            boolean hasForge28_2_2 = version.getLibraries().stream().filter(it -> it.is("net.minecraftforge", "forge"))
+                    .anyMatch(it ->
+                            VersionNumber.VERSION_COMPARATOR.compare("1.14.4-28.2.2", it.getVersion()) <= 0);
+            boolean hasOptiFine = version.getLibraries().stream().anyMatch(it -> it.is("optifine", "OptiFine"));
+            if (hasForge28_2_2 && hasOptiFine && gameVersion.compareTo(VersionNumber.asVersion("1.14.4")) == 0) {
+                Controllers.confirm(i18n("launch.advice.forge28_2_2_optifine"), i18n("message.error"), onAccept, null);
+                flag = true;
+            }
+        }
+
 
         if (!flag)
             onAccept.run();
@@ -327,7 +343,7 @@ public final class LauncherHelper {
                     } else {
                         Platform.runLater(() -> {
                             launchingStepsPane.fireEvent(new DialogCloseEvent());
-                            Controllers.dialog(I18n.i18n("version.launch_script.success", scriptFile.getAbsolutePath()));
+                            Controllers.dialog(i18n("version.launch_script.success", scriptFile.getAbsolutePath()));
                         });
                     }
                 }).thenRunAsync(Schedulers.defaultScheduler(), () -> {
@@ -354,61 +370,61 @@ public final class LauncherHelper {
                                 String message;
                                 if (ex instanceof CurseCompletionException) {
                                     if (ex.getCause() instanceof FileNotFoundException)
-                                        message = I18n.i18n("modpack.type.curse.not_found");
+                                        message = i18n("modpack.type.curse.not_found");
                                     else
-                                        message = I18n.i18n("modpack.type.curse.error");
+                                        message = i18n("modpack.type.curse.error");
                                 } else if (ex instanceof PermissionException) {
-                                    message = I18n.i18n("launch.failed.executable_permission");
+                                    message = i18n("launch.failed.executable_permission");
                                 } else if (ex instanceof ProcessCreationException) {
-                                    message = I18n.i18n("launch.failed.creating_process") + ex.getLocalizedMessage();
+                                    message = i18n("launch.failed.creating_process") + ex.getLocalizedMessage();
                                 } else if (ex instanceof NotDecompressingNativesException) {
-                                    message = I18n.i18n("launch.failed.decompressing_natives") + ex.getLocalizedMessage();
+                                    message = i18n("launch.failed.decompressing_natives") + ex.getLocalizedMessage();
                                 } else if (ex instanceof LibraryDownloadException) {
-                                    message = I18n.i18n("launch.failed.download_library", ((LibraryDownloadException) ex).getLibrary().getName()) + "\n";
+                                    message = i18n("launch.failed.download_library", ((LibraryDownloadException) ex).getLibrary().getName()) + "\n";
                                     if (ex.getCause() instanceof ResponseCodeException) {
                                         ResponseCodeException rce = (ResponseCodeException) ex.getCause();
                                         int responseCode = rce.getResponseCode();
                                         URL url = rce.getUrl();
                                         if (responseCode == 404)
-                                            message += I18n.i18n("download.code.404", url);
+                                            message += i18n("download.code.404", url);
                                         else
-                                            message += I18n.i18n("download.failed", url, responseCode);
+                                            message += i18n("download.failed", url, responseCode);
                                     } else {
                                         message += StringUtils.getStackTrace(ex.getCause());
                                     }
                                 } else if (ex instanceof DownloadException) {
                                     URL url = ((DownloadException) ex).getUrl();
                                     if (ex.getCause() instanceof SocketTimeoutException) {
-                                        message = I18n.i18n("install.failed.downloading.timeout", url);
+                                        message = i18n("install.failed.downloading.timeout", url);
                                     } else if (ex.getCause() instanceof ResponseCodeException) {
                                         ResponseCodeException responseCodeException = (ResponseCodeException) ex.getCause();
-                                        if (I18n.hasKey("download.code." + responseCodeException.getResponseCode())) {
-                                            message = I18n.i18n("download.code." + responseCodeException.getResponseCode(), url);
+                                        if (hasKey("download.code." + responseCodeException.getResponseCode())) {
+                                            message = i18n("download.code." + responseCodeException.getResponseCode(), url);
                                         } else {
-                                            message = I18n.i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
+                                            message = i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
                                         }
                                     } else {
-                                        message = I18n.i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
+                                        message = i18n("install.failed.downloading.detail", url) + "\n" + StringUtils.getStackTrace(ex.getCause());
                                     }
                                 } else if (ex instanceof GameAssetIndexDownloadTask.GameAssetIndexMalformedException) {
-                                    message = I18n.i18n("assets.index.malformed");
+                                    message = i18n("assets.index.malformed");
                                 } else if (ex instanceof AuthlibInjectorDownloadException) {
-                                    message = I18n.i18n("account.failed.injector_download_failure");
+                                    message = i18n("account.failed.injector_download_failure");
                                 } else if (ex instanceof CharacterDeletedException) {
-                                    message = I18n.i18n("account.failed.character_deleted");
+                                    message = i18n("account.failed.character_deleted");
                                 } else if (ex instanceof ResponseCodeException) {
                                     ResponseCodeException rce = (ResponseCodeException) ex;
                                     int responseCode = rce.getResponseCode();
                                     URL url = rce.getUrl();
                                     if (responseCode == 404)
-                                        message = I18n.i18n("download.code.404", url);
+                                        message = i18n("download.code.404", url);
                                     else
-                                        message = I18n.i18n("download.failed", url, responseCode);
+                                        message = i18n("download.failed", url, responseCode);
                                 } else {
                                     message = StringUtils.getStackTrace(ex);
                                 }
                                 Controllers.dialog(message,
-                                        scriptFile == null ? I18n.i18n("launch.failed") : I18n.i18n("version.launch_script.failed"),
+                                        scriptFile == null ? i18n("launch.failed") : i18n("version.launch_script.failed"),
                                         MessageType.ERROR);
                             }
                         }
@@ -583,10 +599,10 @@ public final class LauncherHelper {
 
                         switch (exitType) {
                             case JVM_ERROR:
-                                logWindow.setTitle(I18n.i18n("launch.failed.cannot_create_jvm"));
+                                logWindow.setTitle(i18n("launch.failed.cannot_create_jvm"));
                                 break;
                             case APPLICATION_ERROR:
-                                logWindow.setTitle(I18n.i18n("launch.failed.exited_abnormally"));
+                                logWindow.setTitle(i18n("launch.failed.exited_abnormally"));
                                 break;
                         }
 
