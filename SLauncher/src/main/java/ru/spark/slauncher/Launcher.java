@@ -105,9 +105,6 @@ public final class Launcher extends Application {
         try {
             try {
                 ConfigHolder.init();
-                if (ConfigHolder.isNewlyCreated()) {
-                    Analytics.recordLauncherInstall();
-                }
             } catch (IOException e) {
                 Main.showErrorAndExit(i18n("fatal.config_loading_failure", Paths.get("").toAbsolutePath().normalize()));
             }
@@ -124,6 +121,9 @@ public final class Launcher extends Application {
 
                 primaryStage.show();
             });
+            if (ConfigHolder.isNewlyCreated()) {
+                Analytics.recordLauncherInstall();
+            }
             Analytics.recordLauncherStart();
         } catch (Throwable e) {
             CRASH_REPORTER.uncaughtException(Thread.currentThread(), e);

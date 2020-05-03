@@ -33,6 +33,7 @@ import ru.spark.slauncher.ui.versions.Versions;
 import ru.spark.slauncher.upgrade.RemoteVersion;
 import ru.spark.slauncher.upgrade.UpdateChecker;
 import ru.spark.slauncher.upgrade.UpdateHandler;
+import ru.spark.slauncher.util.Analytics;
 import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.MappedObservableList;
 
@@ -209,6 +210,7 @@ public final class MainPage extends StackPane implements DecoratorPage {
         if (target == null) {
             return;
         }
+        Analytics.recordLauncherUpgrade(target);
         UpdateHandler.updateFrom(target);
     }
 
