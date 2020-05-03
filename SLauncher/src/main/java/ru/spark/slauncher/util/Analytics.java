@@ -16,11 +16,10 @@ public class Analytics {
     private static SentryClient sentry;
 
     public static void init() {
-        Sentry.init("https://2650db753c7b408480b64c7ee0423416@sentry.io/1425014");
+        Sentry.init("http://c07e192100814ed8b65352fe31756447@49.12.96.164:9000/2");
     }
 
     public static void recordLauncherInstall() {
-        Logging.LOG.info("[Sentry] launcher_install");
         Sentry.capture(new EventBuilder().
                 withRelease(Metadata.VERSION).
                 withLevel(Event.Level.INFO).
