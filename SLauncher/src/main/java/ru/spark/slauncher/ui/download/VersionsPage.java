@@ -232,9 +232,4 @@ public final class VersionsPage extends BorderPane implements WizardPage, Refres
     private void onBack() {
         controller.onPrev(true);
     }
-
-    @FXML
-    private void onSponsor() {
-        FXUtils.openLink("https://slauncher.spark1337.net/api/redirect/bmclapi_sponsor");
-    }
 }

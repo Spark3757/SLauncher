@@ -140,7 +140,7 @@ public final class ModpackInfoPage extends Control implements WizardPage {
                 if (skinnable.controller.getSettings().get(ModpackTypeSelectionPage.MODPACK_TYPE) == ModpackTypeSelectionPage.MODPACK_TYPE_SERVER) {
                     Hyperlink hyperlink = new Hyperlink(I18n.i18n("modpack.wizard.step.initialization.server"));
                     hyperlink.setOnMouseClicked(e -> {
-                        FXUtils.openLink("https://slauncher.spark1337.net/api/redirect/server-modpack");
+                        FXUtils.openLink("https://slauncher.ru/#server-modpack");
                     });
                     borderPane.setTop(hyperlink);
                 } else {
