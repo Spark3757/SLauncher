@@ -26,7 +26,7 @@ mainClassName = 'ru.spark.slauncher.Main'
 dependencies {
     compile project(":SLauncherCore")
     compile rootProject.files("lib/JFoenix.jar")
-    compile 'io.sentry:sentry:1.7.16'
+    compile 'io.sentry:sentry:1.7.30'
 }
 
 def digest(String algorithm, byte[] bytes) {
