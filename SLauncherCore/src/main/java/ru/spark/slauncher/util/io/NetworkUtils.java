@@ -3,6 +3,7 @@ package ru.spark.slauncher.util.io;
 import java.io.*;
 import java.net.*;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -41,6 +42,7 @@ public final class NetworkUtils {
         connection.setUseCaches(false);
         connection.setConnectTimeout(15000);
         connection.setReadTimeout(15000);
+        connection.setRequestProperty("Accept-Language", Locale.getDefault().toString());
         return connection;
     }
 

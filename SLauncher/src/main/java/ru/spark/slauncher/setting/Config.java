@@ -78,7 +78,7 @@ public final class Config implements Cloneable, Observable {
     @SerializedName("localization")
     private ObjectProperty<SupportedLocale> localization = new SimpleObjectProperty<>(Locales.DEFAULT);
     @SerializedName("downloadType")
-    private StringProperty downloadType = new SimpleStringProperty("bmclapi");
+    private StringProperty downloadType = new SimpleStringProperty("mojang");
     @SerializedName("configurations")
     private ObservableMap<String, Profile> configurations = FXCollections.observableMap(new TreeMap<>());
     @SerializedName("accounts")
