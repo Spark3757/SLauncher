@@ -17,6 +17,8 @@ public class HttpMultipartRequest implements Closeable {
 
     public HttpMultipartRequest(HttpURLConnection urlConnection) throws IOException {
         this.urlConnection = urlConnection;
+        urlConnection.setDoOutput(true);
+        urlConnection.setUseCaches(false);
         urlConnection.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
 
         stream = new ByteArrayOutputStream();
@@ -31,9 +33,9 @@ public class HttpMultipartRequest implements Closeable {
         addLine("--" + boundary);
         addLine(String.format("Content-Disposition: form-data; name=\"%s\"; filename=\"%s\"", name, filename));
         addLine("Content-Type: " + contentType);
-        addLine("Content-Transfer-Encoding: binary");
         addLine("");
         IOUtils.copyTo(inputStream, stream);
+        addLine("");
         return this;
     }
 
