@@ -19,7 +19,7 @@ public class Analytics {
 
     public static void init() {
         id = getComputerIdentifier();
-        Sentry.init("http://sentry.slauncher.ru:9000/2");
+        Sentry.init("http://c07e192100814ed8b65352fe31756447@sentry.slauncher.ru:9000/2");
         Sentry.getContext().setUser(new UserBuilder().setId(id).build());
     }
 
