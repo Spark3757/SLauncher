@@ -29,6 +29,11 @@ public class MojangYggdrasilProvider implements YggdrasilProvider {
     }
 
     @Override
+    public URL getSkinUploadURL(UUID uuid) throws UnsupportedOperationException {
+        return NetworkUtils.toURL("https://api.mojang.com/user/profile/" + UUIDTypeAdapter.fromUUID(uuid) + "/skin");
+    }
+
+    @Override
     public URL getProfilePropertiesURL(UUID uuid) {
         return NetworkUtils.toURL("https://sessionserver.mojang.com/session/minecraft/profile/" + UUIDTypeAdapter.fromUUID(uuid));
     }

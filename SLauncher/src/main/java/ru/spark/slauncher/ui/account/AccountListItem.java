@@ -9,21 +9,28 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Skin;
 import javafx.scene.image.Image;
+import javafx.stage.FileChooser;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.CredentialExpiredException;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorAccount;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorServer;
 import ru.spark.slauncher.auth.offline.OfflineAccount;
+import ru.spark.slauncher.auth.yggdrasil.YggdrasilAccount;
 import ru.spark.slauncher.game.TexturesLoader;
 import ru.spark.slauncher.setting.Accounts;
+import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.DialogController;
+import ru.spark.slauncher.ui.construct.PromptDialogPane;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.i18n.I18n;
 
+import java.io.File;
 import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
+
+import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AccountListItem extends RadioButton {
 
@@ -41,7 +48,7 @@ public class AccountListItem extends RadioButton {
         if (account instanceof AuthlibInjectorAccount) {
             AuthlibInjectorServer server = ((AuthlibInjectorAccount) account).getServer();
             subtitle.bind(Bindings.concat(
-                    loginTypeName, ", ", I18n.i18n("account.injector.server"), ": ",
+                    loginTypeName, ", ", i18n("account.injector.server"), ": ",
                     Bindings.createStringBinding(server::getName, server)));
         } else {
             subtitle.set(loginTypeName);
@@ -80,6 +87,36 @@ public class AccountListItem extends RadioButton {
             }
         });
     }
+    public boolean canUploadSkin() {
+        return account instanceof YggdrasilAccount && !(account instanceof AuthlibInjectorAccount);
+    }
+
+    public void uploadSkin() {
+        if (!(account instanceof YggdrasilAccount)) {
+            return;
+        }
+
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle(i18n("account.skin.upload"));
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(i18n("account.skin.file"), "*.png"));
+        File selectedFile = chooser.showOpenDialog(Controllers.getStage());
+        if (selectedFile == null) {
+            return;
+        }
+
+        Controllers.prompt(new PromptDialogPane.Builder(i18n("account.skin.upload"), (questions, resolve, reject) -> {
+            PromptDialogPane.Builder.CandidatesQuestion q = (PromptDialogPane.Builder.CandidatesQuestion) questions.get(0);
+            String model = q.getValue() == 0 ? "" : "slim";
+            try {
+                ((YggdrasilAccount) account).uploadSkin(model, selectedFile.toPath());
+                resolve.run();
+            } catch (AuthenticationException e) {
+                reject.accept(AddAccountPane.accountException(e));
+            }
+        }).addQuestion(new PromptDialogPane.Builder.CandidatesQuestion(i18n("account.skin.model"),
+                i18n("account.skin.model.default"), i18n("account.skin.model.slim"))));
+    }
+
 
     public void remove() {
         Accounts.getAccounts().remove(account);

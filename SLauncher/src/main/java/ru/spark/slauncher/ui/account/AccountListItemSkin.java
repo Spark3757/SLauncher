@@ -20,6 +20,7 @@ import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.BindingMapping;
 
 import static ru.spark.slauncher.ui.FXUtils.runInFX;
+import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public class AccountListItemSkin extends SkinBase<AccountListItem> {
 
@@ -71,15 +72,24 @@ public class AccountListItemSkin extends SkinBase<AccountListItem> {
         btnRefresh.setOnMouseClicked(e -> skinnable.refresh());
         btnRefresh.getStyleClass().add("toggle-icon4");
         btnRefresh.setGraphic(SVG.refresh(Theme.blackFillBinding(), -1, -1));
-        runInFX(() -> FXUtils.installFastTooltip(btnRefresh, I18n.i18n("button.refresh")));
+        runInFX(() -> FXUtils.installFastTooltip(btnRefresh, i18n("button.refresh")));
         right.getChildren().add(btnRefresh);
+
+        if (skinnable.canUploadSkin()) {
+            JFXButton btnUpload = new JFXButton();
+            btnUpload.setOnMouseClicked(e -> skinnable.uploadSkin());
+            btnUpload.getStyleClass().add("toggle-icon4");
+            btnUpload.setGraphic(SVG.upload(Theme.blackFillBinding(), -1, -1));
+            runInFX(() -> FXUtils.installFastTooltip(btnUpload, i18n("account.skin.upload")));
+            right.getChildren().add(btnUpload);
+        }
 
         JFXButton btnRemove = new JFXButton();
         btnRemove.setOnMouseClicked(e -> skinnable.remove());
         btnRemove.getStyleClass().add("toggle-icon4");
         BorderPane.setAlignment(btnRemove, Pos.CENTER);
         btnRemove.setGraphic(SVG.delete(Theme.blackFillBinding(), -1, -1));
-        runInFX(() -> FXUtils.installFastTooltip(btnRemove, I18n.i18n("button.delete")));
+        runInFX(() -> FXUtils.installFastTooltip(btnRemove, i18n("button.delete")));
         right.getChildren().add(btnRemove);
         root.setRight(right);
 

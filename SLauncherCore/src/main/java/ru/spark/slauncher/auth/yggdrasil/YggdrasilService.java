@@ -12,11 +12,17 @@ import ru.spark.slauncher.util.Pair;
 import ru.spark.slauncher.util.StringUtils;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
 import ru.spark.slauncher.util.gson.ValidationTypeAdapterFactory;
+import ru.spark.slauncher.util.io.FileUtils;
+import ru.spark.slauncher.util.io.HttpMultipartRequest;
 import ru.spark.slauncher.util.io.NetworkUtils;
 import ru.spark.slauncher.util.javafx.ObservableOptionalCache;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -126,6 +132,23 @@ public class YggdrasilService {
 
         requireEmpty(request(provider.getInvalidationURL(), createRequestWithCredentials(accessToken, clientToken)));
     }
+
+    public void uploadSkin(UUID uuid, String model, Path file) throws AuthenticationException, UnsupportedOperationException {
+        try {
+            HttpURLConnection con = NetworkUtils.createHttpConnection(provider.getSkinUploadURL(uuid));
+            con.setRequestMethod("PUT");
+            con.setDoOutput(true);
+            try (HttpMultipartRequest request = new HttpMultipartRequest(con)) {
+                try (InputStream fis = Files.newInputStream(file)) {
+                    request.file("file", FileUtils.getName(file), "image/" + FileUtils.getExtension(file), fis);
+                }
+                request.param("model", model);
+            }
+        } catch (IOException e) {
+            throw new AuthenticationException(e);
+        }
+    }
+
 
     /**
      * Get complete game profile.

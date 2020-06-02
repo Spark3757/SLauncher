@@ -4,6 +4,7 @@ import javafx.beans.binding.ObjectBinding;
 import ru.spark.slauncher.auth.*;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -167,6 +168,10 @@ public class YggdrasilAccount extends Account {
     public void clearCache() {
         authenticated = false;
         service.getProfileRepository().invalidate(characterUUID);
+    }
+
+    public void uploadSkin(String model, Path file) throws AuthenticationException, UnsupportedOperationException {
+        service.uploadSkin(characterUUID, model, file);
     }
 
     private static String randomClientToken() {
