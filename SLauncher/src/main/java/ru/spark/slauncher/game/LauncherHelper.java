@@ -10,6 +10,7 @@ import ru.spark.slauncher.download.DefaultDependencyManager;
 import ru.spark.slauncher.download.LibraryAnalyzer;
 import ru.spark.slauncher.download.MaintainTask;
 import ru.spark.slauncher.download.game.GameAssetIndexDownloadTask;
+import ru.spark.slauncher.download.game.GameVerificationFixTask;
 import ru.spark.slauncher.download.game.LibraryDownloadException;
 import ru.spark.slauncher.launch.NotDecompressingNativesException;
 import ru.spark.slauncher.launch.PermissionException;
@@ -300,6 +301,9 @@ public final class LauncherHelper {
                                 return null;
                             }
                         }))).withStage("launch.state.dependencies")
+                .thenComposeAsync(() -> {
+                    return gameVersion.map(s -> new GameVerificationFixTask(dependencyManager, s, version)).orElse(null);
+                })
                 .thenComposeAsync(Task.supplyAsync(() -> {
                     try {
                         return account.logIn();
