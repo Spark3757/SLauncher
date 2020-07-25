@@ -87,7 +87,7 @@ public class DecoratorController {
     // ==== Background ====
 
     private void setupBackground() {
-        decorator.backgroundProperty().bind(
+        decorator.contentBackgroundProperty().bind(
                 Bindings.createObjectBinding(
                         () -> {
                             Image image = null;
