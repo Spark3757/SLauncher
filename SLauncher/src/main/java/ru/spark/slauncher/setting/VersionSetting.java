@@ -510,8 +510,7 @@ public final class VersionSetting implements Cloneable {
                 .setPrecalledCommand(getPreLaunchCommand())
                 .setNoGeneratedJVMArgs(isNoJVMArgs());
         if (ConfigHolder.config().hasProxy()) {
-            builder.setProxyHost(ConfigHolder.config().getProxyHost());
-            builder.setProxyPort(ConfigHolder.config().getProxyPort());
+            builder.setProxy(ProxyManager.getProxy());
             if (ConfigHolder.config().hasProxyAuth()) {
                 builder.setProxyUser(ConfigHolder.config().getProxyUser());
                 builder.setProxyPass(ConfigHolder.config().getProxyPass());

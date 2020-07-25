@@ -4,6 +4,7 @@ import ru.spark.slauncher.util.platform.JavaVersion;
 
 import java.io.File;
 import java.io.Serializable;
+import java.net.Proxy;
 
 /**
  * @author spark1337
@@ -25,8 +26,7 @@ public class LaunchOptions implements Serializable {
     private boolean fullscreen;
     private String serverIp;
     private String wrapper;
-    private String proxyHost;
-    private int proxyPort;
+    private Proxy proxy;
     private String proxyUser;
     private String proxyPass;
     private boolean noGeneratedJVMArgs;
@@ -142,17 +142,10 @@ public class LaunchOptions implements Serializable {
     }
 
     /**
-     * The host of the proxy address
+     * Proxy settings
      */
-    public String getProxyHost() {
-        return proxyHost;
-    }
-
-    /**
-     * the port of the proxy address.
-     */
-    public int getProxyPort() {
-        return proxyPort;
+    public Proxy getProxy() {
+        return proxy;
     }
 
     /**
@@ -266,13 +259,8 @@ public class LaunchOptions implements Serializable {
             return this;
         }
 
-        public Builder setProxyHost(String proxyHost) {
-            options.proxyHost = proxyHost;
-            return this;
-        }
-
-        public Builder setProxyPort(int proxyPort) {
-            options.proxyPort = proxyPort;
+        public Builder setProxy(Proxy proxy) {
+            options.proxy = proxy;
             return this;
         }
 
