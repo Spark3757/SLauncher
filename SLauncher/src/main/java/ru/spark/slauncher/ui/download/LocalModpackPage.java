@@ -83,7 +83,7 @@ public final class LocalModpackPage extends StackPane implements WizardPage {
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter(I18n.i18n("modpack"), "*.zip"));
             selectedFile = chooser.showOpenDialog(Controllers.getStage());
             if (selectedFile == null) {
-                Platform.runLater(controller::onEnd);
+                controller.onEnd();
                 return;
             }
 

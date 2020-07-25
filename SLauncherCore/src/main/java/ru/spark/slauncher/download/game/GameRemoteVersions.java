@@ -1,7 +1,9 @@
 package ru.spark.slauncher.download.game;
 
+import com.google.gson.JsonParseException;
 import com.google.gson.annotations.SerializedName;
 import ru.spark.slauncher.util.Immutable;
+import ru.spark.slauncher.util.gson.Validation;
 
 import java.util.Collections;
 import java.util.List;
@@ -10,7 +12,7 @@ import java.util.List;
  * @author spark1337
  */
 @Immutable
-public final class GameRemoteVersions {
+public final class GameRemoteVersions implements Validation {
 
     @SerializedName("versions")
     private final List<GameRemoteVersionInfo> versions;
@@ -37,6 +39,12 @@ public final class GameRemoteVersions {
 
     public List<GameRemoteVersionInfo> getVersions() {
         return versions;
+    }
+
+    @Override
+    public void validate() throws JsonParseException {
+        if (versions == null)
+            throw new JsonParseException("GameRemoteVersions.versions cannot be null");
     }
 
 }

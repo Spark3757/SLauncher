@@ -6,11 +6,14 @@ import ru.spark.slauncher.task.Task;
 import java.util.Map;
 
 public interface WizardDisplayer {
-    void onStart();
+    default void onStart() {
+    }
 
-    void onEnd();
+    default void onEnd() {
+    }
 
-    void onCancel();
+    default void onCancel() {
+    }
 
     void navigateTo(Node page, Navigation.NavigationDirection nav);
 
