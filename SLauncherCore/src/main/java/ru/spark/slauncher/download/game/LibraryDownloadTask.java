@@ -13,6 +13,7 @@ import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.io.IOUtils;
 import ru.spark.slauncher.util.io.NetworkUtils;
+import ru.spark.slauncher.util.platform.SystemUtils;
 
 import java.io.*;
 import java.net.URL;
@@ -112,7 +113,7 @@ public class LibraryDownloadTask extends Task<Void> {
             }
         }
 
-        if (testURLExistence(url)) {
+        if (SystemUtils.JRE_CAPABILITY_PACK200 && testURLExistence(url)) {
             List<URL> urls = dependencyManager.getDownloadProvider().injectURLWithCandidates(url + ".pack.xz");
             task = new FileDownloadTask(urls, xzFile, null);
             task.setCacheRepository(cacheRepository);
