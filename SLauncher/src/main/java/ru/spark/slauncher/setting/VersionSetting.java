@@ -497,7 +497,7 @@ public final class VersionSetting implements Cloneable {
                 .setVersionType(Metadata.TITLE)
                 .setProfileName(Metadata.TITLE)
                 .setMinecraftArgs(getMinecraftArgs())
-                .setJavaArgs(Paths.get(OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar").toFile().exists() ?
+                .setJavaArgs(Paths.get(OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar").toFile().exists() && OperatingSystem.CURRENT_OS.equals(OperatingSystem.WINDOWS) ?
                         "-javaagent:" + OperatingSystem.getWorkingDirectory("SLauncher").toAbsolutePath() + "/brander.jar " + getJavaArgs() : getJavaArgs())
                 .setMaxMemory(getMaxMemory())
                 .setMinMemory(getMinMemory())
