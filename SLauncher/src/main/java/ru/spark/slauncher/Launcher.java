@@ -24,6 +24,7 @@ import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import static ru.spark.slauncher.util.Logging.LOG;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
@@ -106,6 +107,7 @@ public final class Launcher extends Application {
             try {
                 ConfigHolder.init();
             } catch (IOException e) {
+                LOG.log(Level.SEVERE, "Failed to load config", e);
                 Main.showErrorAndExit(i18n("fatal.config_loading_failure", Paths.get("").toAbsolutePath().normalize()));
             }
 

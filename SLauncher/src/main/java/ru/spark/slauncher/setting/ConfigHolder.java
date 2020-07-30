@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static ru.spark.slauncher.util.Logging.LOG;
 
 public final class ConfigHolder {
 
@@ -53,6 +54,7 @@ public final class ConfigHolder {
         }
 
         configLocation = locateConfig();
+        LOG.log(Level.INFO, "Config location: " + configLocation);
         configInstance = loadConfig();
         configInstance.addListener(source -> markConfigDirty());
 
@@ -79,6 +81,25 @@ public final class ConfigHolder {
     }
 
     private static Path locateConfig() {
+        Path exePath = Paths.get("");
+        try {
+            Path jarPath = Paths.get(ConfigHolder.class.getProtectionDomain().getCodeSource().getLocation()
+                    .toURI()).toAbsolutePath();
+            if (Files.isRegularFile(jarPath)) {
+                jarPath = jarPath.getParent();
+                exePath = jarPath;
+
+                Path config = jarPath.resolve(CONFIG_FILENAME);
+                if (Files.isRegularFile(config))
+                    return config;
+
+                Path dotConfig = jarPath.resolve(CONFIG_FILENAME_LINUX);
+                if (Files.isRegularFile(dotConfig))
+                    return dotConfig;
+            }
+
+        } catch (Throwable ignore) {
+        }
         Path config = Paths.get(CONFIG_FILENAME);
         if (Files.isRegularFile(config))
             return config;
@@ -88,7 +109,7 @@ public final class ConfigHolder {
             return dotConfig;
 
         // create new
-        return OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS ? config : dotConfig;
+        return exePath.resolve(OperatingSystem.CURRENT_OS == OperatingSystem.WINDOWS ? CONFIG_FILENAME : CONFIG_FILENAME_LINUX);
     }
 
     private static Config loadConfig() throws IOException {
