@@ -1,10 +1,13 @@
 package ru.spark.slauncher.game;
 
 import com.google.gson.JsonParseException;
+import com.google.gson.reflect.TypeToken;
+import org.jetbrains.annotations.Nullable;
 import ru.spark.slauncher.download.MaintainTask;
 import ru.spark.slauncher.download.game.VersionJsonSaveTask;
 import ru.spark.slauncher.event.*;
 import ru.spark.slauncher.mod.ModManager;
+import ru.spark.slauncher.mod.ModpackConfiguration;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.util.Lang;
 import ru.spark.slauncher.util.Logging;
@@ -407,6 +410,22 @@ public class DefaultGameRepository implements GameRepository {
 
     public File getModpackConfiguration(String version) {
         return new File(getVersionRoot(version), "modpack.json");
+    }
+
+    /**
+     * read modpack configuration for a version.
+     * @param version version installed as modpack
+     * @param <M> manifest type of ModpackConfiguration
+     * @return modpack configuration object, or null if this version is not a modpack.
+     * @throws VersionNotFoundException if version does not exist.
+     * @throws IOException if an i/o error occurs.
+     */
+    @Nullable
+    public <M> ModpackConfiguration<M> readModpackConfiguration(String version) throws IOException, VersionNotFoundException {
+        if (!hasVersion(version)) throw new VersionNotFoundException(version);
+        File file = getModpackConfiguration(version);
+        if (!file.exists()) return null;
+        return JsonUtils.GSON.fromJson(FileUtils.readText(file), new TypeToken<ModpackConfiguration<M>>(){}.getType());
     }
 
     public boolean isModpack(String version) {
