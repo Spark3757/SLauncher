@@ -116,7 +116,7 @@ public final class MultiMCModpackInstallTask extends Task<Void> {
                 dependents.add(new ModpackInstallTask<>(zipFile, run, modpack.getEncoding(), "/" + manifest.getName() + "/minecraft", any -> true, config).withStage("slauncher.modpack"));
         }
 
-        dependents.add(new MinecraftInstanceTask<>(zipFile, modpack.getEncoding(), "/" + manifest.getName() + "/minecraft", manifest, MODPACK_TYPE, repository.getModpackConfiguration(name)).withStage("slauncher.modpack"));
+        dependents.add(new MinecraftInstanceTask<>(zipFile, modpack.getEncoding(), "/" + manifest.getName() + "/minecraft", manifest, MODPACK_TYPE, manifest.getName(), null, repository.getModpackConfiguration(name)).withStage("slauncher.modpack"));
     }
 
     @Override

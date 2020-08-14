@@ -266,7 +266,12 @@ public class RootPage extends DecoratorTabPage {
     }
 
     // ==== Accounts ====
+
+    private boolean checkedAccont = false;
+
     public void checkAccount() {
+        if (checkedAccont) return;
+        checkedAccont = true;
         if (Accounts.getAccounts().isEmpty())
             Platform.runLater(this::addNewAccount);
     }

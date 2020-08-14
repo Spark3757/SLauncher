@@ -103,7 +103,7 @@ public final class LocalModpackPage extends StackPane implements WizardPage {
                     lblModpackLocation.setText(selectedFile.getAbsolutePath());
 
                     if (!name.isPresent()) {
-                        txtModpackName.setText(manifest.getName() + (StringUtils.isBlank(manifest.getVersion()) ? "" : "-" + manifest.getVersion()));
+                        txtModpackName.setText(manifest.getName());
                         txtModpackName.getValidators().addAll(
                                 new Validator(I18n.i18n("install.new_game.already_exists"), str -> !profile.getRepository().hasVersion(str) && StringUtils.isNotBlank(str)),
                                 new Validator(I18n.i18n("version.forbidden_name"), str -> !profile.getRepository().forbidsVersion(str))
