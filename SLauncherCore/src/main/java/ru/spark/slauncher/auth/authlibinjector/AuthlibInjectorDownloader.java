@@ -14,8 +14,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import java.util.logging.Level;
+
+import static ru.spark.slauncher.util.Logging.LOG;
 
 public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvider {
 
@@ -25,37 +28,30 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
     private final Supplier<DownloadProvider> downloadProvider;
 
     /**
-     * The flag will be reset after application restart.
+     * @param artifactLocation where to save authlib-injector artifacts
      */
-    private boolean updateChecked = false;
-
-    /**
-     * @param artifactsDirectory where to save authlib-injector artifacts
-     */
-    public AuthlibInjectorDownloader(Path artifactsDirectory, Supplier<DownloadProvider> downloadProvider) {
-        this.artifactLocation = artifactsDirectory.resolve("authlib-injector.jar");
+    public AuthlibInjectorDownloader(Path artifactLocation, Supplier<DownloadProvider> downloadProvider) {
+        this.artifactLocation = artifactLocation;
         this.downloadProvider = downloadProvider;
     }
 
     @Override
     public AuthlibInjectorArtifactInfo getArtifactInfo() throws IOException {
-        synchronized (artifactLocation) {
+        Optional<AuthlibInjectorArtifactInfo> cached = getArtifactInfoImmediately();
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+
+        synchronized (this) {
             Optional<AuthlibInjectorArtifactInfo> local = getLocalArtifact();
-
-            if (!local.isPresent() || !updateChecked) {
-                try {
-                    update(local);
-                    updateChecked = true;
-                } catch (IOException e) {
-                    Logging.LOG.log(Level.WARNING, "Failed to download authlib-injector", e);
-                    if (!local.isPresent()) {
-                        throw e;
-                    }
-                    Logging.LOG.warning("Fallback to use cached artifact: " + local.get());
-                }
+            if (local.isPresent()) {
+                return local.get();
             }
-
-            return getLocalArtifact().orElseThrow(() -> new IOException("The updated authlib-inejector cannot be recognized"));
+            LOG.info("No local authlib-injector found, downloading");
+            updateChecked.set(true);
+            update();
+            local = getLocalArtifact();
+            return local.orElseThrow(() -> new IOException("The downloaded authlib-inejector cannot be recognized"));
         }
     }
 
@@ -64,10 +60,22 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
         return getLocalArtifact();
     }
 
-    private void update(Optional<AuthlibInjectorArtifactInfo> local) throws IOException {
-        Logging.LOG.info("Checking update of authlib-injector");
+    private final AtomicBoolean updateChecked = new AtomicBoolean(false);
+
+    public void checkUpdate() throws IOException {
+        // this method runs only once
+        if (updateChecked.compareAndSet(false, true)) {
+            synchronized (this) {
+                LOG.info("Checking update of authlib-injector");
+                update();
+            }
+        }
+    }
+
+    private void update() throws IOException {
         AuthlibInjectorVersionInfo latest = getLatestArtifactInfo();
 
+        Optional<AuthlibInjectorArtifactInfo> local = getLocalArtifact();
         if (local.isPresent() && local.get().getBuildNumber() >= latest.buildNumber) {
             return;
         }
@@ -82,7 +90,7 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
             throw new IOException("Failed to download authlib-injector", e);
         }
 
-        Logging.LOG.info("Updated authlib-injector to " + latest.version);
+        LOG.info("Updated authlib-injector to " + latest.version);
     }
 
     private AuthlibInjectorVersionInfo getLatestArtifactInfo() throws IOException {
@@ -97,19 +105,19 @@ public class AuthlibInjectorDownloader implements AuthlibInjectorArtifactProvide
     }
 
     private Optional<AuthlibInjectorArtifactInfo> getLocalArtifact() {
-        if (!Files.isRegularFile(artifactLocation)) {
+        return parseArtifact(artifactLocation);
+    }
+
+    protected static Optional<AuthlibInjectorArtifactInfo> parseArtifact(Path path) {
+        if (!Files.isRegularFile(path)) {
             return Optional.empty();
         }
         try {
-            return Optional.of(AuthlibInjectorArtifactInfo.from(artifactLocation));
+            return Optional.of(AuthlibInjectorArtifactInfo.from(path));
         } catch (IOException e) {
-            Logging.LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
+            LOG.log(Level.WARNING, "Bad authlib-injector artifact", e);
             return Optional.empty();
         }
-    }
-
-    public static boolean isArtifactsDirectory(Path artifactsDirectory) {
-        return Files.exists(artifactsDirectory.resolve("authlib-injector.jar"));
     }
 
     private static class AuthlibInjectorVersionInfo {
