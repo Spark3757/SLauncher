@@ -86,6 +86,9 @@ public final class AsyncTaskExecutor extends TaskExecutor {
                 .thenComposeAsync(unused -> {
                     totTask.addAndGet(tasks.size());
 
+                    if (isCancelled())
+                        return CompletableFuture.runAsync(this::checkCancellation);
+
                     return CompletableFuture.allOf(tasks.stream()
                             .map(task -> CompletableFuture.completedFuture(null)
                                     .thenComposeAsync(unused2 -> executeTask(parentTask, task))
@@ -104,8 +107,12 @@ public final class AsyncTaskExecutor extends TaskExecutor {
     }
 
     private CompletableFuture<?> executeTask(Task<?> parentTask, Task<?> task) {
+        checkCancellation();
+
         return CompletableFuture.completedFuture(null)
                 .thenComposeAsync(unused -> {
+                    checkCancellation();
+
                     task.setCancelled(this::isCancelled);
                     task.setState(Task.TaskState.READY);
                     if (parentTask != null && task.getStage() == null)
@@ -165,6 +172,8 @@ public final class AsyncTaskExecutor extends TaskExecutor {
                         task.setException(dependenciesException);
                         rethrow(dependenciesException);
                     }
+
+                    checkCancellation();
 
                     if (task.getSignificance().shouldLog()) {
                         Logging.LOG.log(Level.FINER, "Task finished: " + task.getName());
@@ -230,6 +239,12 @@ public final class AsyncTaskExecutor extends TaskExecutor {
                 rethrow(e);
             }
         };
+    }
+
+    private void checkCancellation() {
+        if (isCancelled()) {
+            throw new CancellationException("Cancelled by user");
+        }
     }
 
     private static Thread.UncaughtExceptionHandler uncaughtExceptionHandler = null;
