@@ -14,14 +14,24 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static ru.spark.slauncher.setting.ConfigHolder.config;
+import static ru.spark.slauncher.util.Lang.mapOf;
+import static ru.spark.slauncher.util.Pair.pair;
 
 public final class DownloadProviders {
-    public static final Map<String, DownloadProvider> providersById = Lang.mapOf(
-            Pair.pair("mojang", new MojangDownloadProvider()),
-            Pair.pair("bmclapi", new BMCLAPIDownloadProvider("https://bmclapi2.bangbang93.com")),
-            Pair.pair("mcbbs", new BMCLAPIDownloadProvider("https://download.mcbbs.net")));
+    public static final Map<String, DownloadProvider> providersById;
     public static final String DEFAULT_PROVIDER_ID = "mojang";
     private static final AdaptedDownloadProvider DOWNLOAD_PROVIDER = new AdaptedDownloadProvider();
+
+    static {
+        String bmclapiRoot = "https://bmclapi2.bangbang93.com";
+        String bmclapiRootOverride = System.getProperty("hmcl.bmclapi.override");
+        if (bmclapiRootOverride != null) bmclapiRoot = bmclapiRootOverride;
+
+        providersById = mapOf(
+                pair("mojang", new MojangDownloadProvider()),
+                pair("bmclapi", new BMCLAPIDownloadProvider(bmclapiRoot)),
+                pair("mcbbs", new BMCLAPIDownloadProvider("https://download.mcbbs.net")));
+    }
 
     private DownloadProviders() {
     }
