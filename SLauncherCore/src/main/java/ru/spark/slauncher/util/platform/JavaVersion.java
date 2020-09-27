@@ -13,6 +13,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
@@ -76,6 +78,7 @@ public final class JavaVersion {
     public static final int JAVA_7 = 70;
     public static final int JAVA_8 = 80;
     public static final int JAVA_9_AND_LATER = 90;
+    private static final Map<Path, JavaVersion> fromExecutableCache = new ConcurrentHashMap<>();
 
     private static int parseVersion(String version) {
         Matcher matcher = VERSION.matcher(version);
@@ -92,10 +95,14 @@ public final class JavaVersion {
     }
 
     public static JavaVersion fromExecutable(Path executable) throws IOException {
+        executable = executable.toRealPath();
+        JavaVersion cachedJavaVersion = fromExecutableCache.get(executable);
+        if (cachedJavaVersion != null)
+            return cachedJavaVersion;
+
+
         Platform platform = Platform.BIT_32;
         String version = null;
-
-        executable = executable.toRealPath();
 
         Process process = new ProcessBuilder(executable.toString(), "-version").start();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
@@ -114,7 +121,9 @@ public final class JavaVersion {
         if (parseVersion(version) == UNKNOWN)
             throw new IOException("Unrecognized Java version " + version);
 
-        return new JavaVersion(executable, version, platform);
+        JavaVersion javaVersion = new JavaVersion(executable, version, platform);
+        fromExecutableCache.put(executable, javaVersion);
+        return javaVersion;
     }
 
     private static Path getExecutable(Path javaHome) {
