@@ -6,11 +6,18 @@ import ru.spark.slauncher.game.SLCacheRepository;
 import ru.spark.slauncher.util.CacheRepository;
 import ru.spark.slauncher.util.io.FileUtils;
 
+import java.util.Locale;
+
+import static ru.spark.slauncher.setting.ConfigHolder.config;
+
 public class Settings {
 
     private static Settings instance;
 
     private Settings() {
+        config().localizationProperty().addListener(unused -> updateSystemLocale());
+        updateSystemLocale();
+
         DownloadProviders.init();
         ProxyManager.init();
         Accounts.init();
@@ -24,7 +31,7 @@ public class Settings {
             } else {
                 return getDefaultCommonDirectory();
             }
-        }, ConfigHolder.config().commonDirectoryProperty(), ConfigHolder.config().commonDirTypeProperty()));
+        }, config().commonDirectoryProperty(), config().commonDirTypeProperty()));
     }
 
     public static Settings instance() {
@@ -46,13 +53,17 @@ public class Settings {
     }
 
     public String getCommonDirectory() {
-        switch (ConfigHolder.config().getCommonDirType()) {
+        switch (config().getCommonDirType()) {
             case DEFAULT:
                 return getDefaultCommonDirectory();
             case CUSTOM:
-                return ConfigHolder.config().getCommonDirectory();
+                return config().getCommonDirectory();
             default:
                 return null;
         }
+    }
+
+    private static void updateSystemLocale() {
+        Locale.setDefault(config().getLocalization().getLocale());
     }
 }
