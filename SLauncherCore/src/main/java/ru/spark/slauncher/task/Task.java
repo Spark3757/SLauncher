@@ -5,6 +5,7 @@ import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.ReadOnlyDoubleWrapper;
 import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.ReadOnlyStringWrapper;
+import org.jetbrains.annotations.Nullable;
 import ru.spark.slauncher.event.EventManager;
 import ru.spark.slauncher.util.InvocationDispatcher;
 import ru.spark.slauncher.util.Lang;
@@ -115,6 +116,7 @@ public abstract class Task<T> {
      *
      * @return the exception thrown during execution, possibly from dependents or dependencies.
      */
+    @Nullable
     public final Exception getException() {
         return exception;
     }

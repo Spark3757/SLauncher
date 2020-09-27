@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.jar.JarOutputStream;
@@ -82,6 +83,8 @@ public class LibraryDownloadTask extends Task<Void> {
             Exception t = task.getException();
             if (t instanceof DownloadException)
                 throw new LibraryDownloadException(library, t.getCause());
+            else if (t == null)
+                throw new CancellationException();
             else
                 throw new LibraryDownloadException(library, t);
         } else {
