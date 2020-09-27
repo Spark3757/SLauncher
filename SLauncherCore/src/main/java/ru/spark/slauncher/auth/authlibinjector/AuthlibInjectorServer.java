@@ -25,38 +25,37 @@ import java.util.logging.Level;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Collections.emptyMap;
+import static ru.spark.slauncher.util.Lang.tryCast;
+import static ru.spark.slauncher.util.Logging.LOG;
+import static ru.spark.slauncher.util.io.IOUtils.readFullyAsByteArray;
+import static ru.spark.slauncher.util.io.IOUtils.readFullyWithoutClosing;
 
 @JsonAdapter(AuthlibInjectorServer.Deserializer.class)
 public class AuthlibInjectorServer implements Observable {
 
-    private static final int MAX_REDIRECTS = 5;
     private static final Gson GSON = new GsonBuilder().create();
 
     public static AuthlibInjectorServer locateServer(String url) throws IOException {
         try {
-            url = parseInputUrl(url);
-            HttpURLConnection conn;
-            int redirectCount = 0;
-            for (; ; ) {
-                conn = (HttpURLConnection) new URL(url).openConnection();
-                Optional<String> ali = getApiLocationIndication(conn);
-                if (ali.isPresent()) {
+            url = addHttpsIfMissing(url);
+            HttpURLConnection conn = (HttpURLConnection) new URL(url).openConnection();
+
+            String ali = conn.getHeaderField("x-authlib-injector-api-location");
+            if (ali != null) {
+                URL absoluteAli = new URL(conn.getURL(), ali);
+                if (!urlEqualsIgnoreSlash(url, absoluteAli.toString())) {
                     conn.disconnect();
-                    url = ali.get();
-                    if (redirectCount >= MAX_REDIRECTS) {
-                        throw new IOException("Exceeded maximum number of redirects (" + MAX_REDIRECTS + ")");
-                    }
-                    redirectCount++;
-                    Logging.LOG.info("Redirect API root to: " + url);
-                } else {
-                    break;
+                    url = absoluteAli.toString();
+                    conn = (HttpURLConnection) absoluteAli.openConnection();
                 }
             }
 
+            if (!url.endsWith("/"))
+                url += "/";
 
             try {
                 AuthlibInjectorServer server = new AuthlibInjectorServer(url);
-                server.refreshMetadata(IOUtils.readFullyWithoutClosing(conn.getInputStream()));
+                server.refreshMetadata(readFullyWithoutClosing(conn.getInputStream()));
                 return server;
             } finally {
                 conn.disconnect();
@@ -66,49 +65,20 @@ public class AuthlibInjectorServer implements Observable {
         }
     }
 
-    private static Optional<String> getApiLocationIndication(URLConnection conn) {
-        return Optional.ofNullable(conn.getHeaderFields().get("X-Authlib-Injector-API-Location"))
-                .flatMap(list -> list.isEmpty() ? Optional.empty() : Optional.of(list.get(0)))
-                .flatMap(indication -> {
-                    String currentUrl = appendSuffixSlash(conn.getURL().toString());
-                    String newUrl;
-                    try {
-                        newUrl = appendSuffixSlash(new URL(conn.getURL(), indication).toString());
-                    } catch (MalformedURLException e) {
-                        Logging.LOG.warning("Failed to resolve absolute ALI, the header is [" + indication + "]. Ignore it.");
-                        return Optional.empty();
-                    }
-
-                    if (newUrl.equals(currentUrl)) {
-                        return Optional.empty();
-                    } else {
-                        return Optional.of(newUrl);
-                    }
-                });
-    }
-
-    private static String parseInputUrl(String url) {
+    private static String addHttpsIfMissing(String url) {
         String lowercased = url.toLowerCase();
         if (!lowercased.startsWith("http://") && !lowercased.startsWith("https://")) {
             url = "https://" + url;
         }
-
-        url = appendSuffixSlash(url);
         return url;
     }
 
-    private static String appendSuffixSlash(String url) {
-        if (!url.endsWith("/")) {
-            return url + "/";
-        } else {
-            return url;
-        }
-    }
-
-    public static AuthlibInjectorServer fetchServerInfo(String url) throws IOException {
-        AuthlibInjectorServer server = new AuthlibInjectorServer(url);
-        server.refreshMetadata();
-        return server;
+    private static boolean urlEqualsIgnoreSlash(String a, String b) {
+        if (!a.endsWith("/"))
+            a += "/";
+        if (!b.endsWith("/"))
+            b += "/";
+        return a.equals(b);
     }
 
     private String url;
@@ -162,7 +132,7 @@ public class AuthlibInjectorServer implements Observable {
     }
 
     public void refreshMetadata() throws IOException {
-        refreshMetadata(IOUtils.readFullyAsByteArray(new URL(url).openStream()));
+        refreshMetadata(readFullyAsByteArray(new URL(url).openStream()));
     }
 
     private void refreshMetadata(byte[] rawResponse) throws IOException {
@@ -175,7 +145,7 @@ public class AuthlibInjectorServer implements Observable {
         }
 
         metadataRefreshed = true;
-        Logging.LOG.info("authlib-injector server metadata refreshed: " + url);
+        LOG.info("authlib-injector server metadata refreshed: " + url);
         Platform.runLater(helper::invalidate);
     }
 
@@ -189,15 +159,15 @@ public class AuthlibInjectorServer implements Observable {
             this.metadataResponse = metadataResponse;
             this.metadataTimestamp = metadataTimestamp;
 
-            Optional<JsonObject> metaObject = Lang.tryCast(response.get("meta"), JsonObject.class);
+            Optional<JsonObject> metaObject = tryCast(response.get("meta"), JsonObject.class);
 
-            this.name = metaObject.flatMap(meta -> Lang.tryCast(meta.get("serverName"), JsonPrimitive.class).map(JsonPrimitive::getAsString))
+            this.name = metaObject.flatMap(meta -> tryCast(meta.get("serverName"), JsonPrimitive.class).map(JsonPrimitive::getAsString))
                     .orElse(null);
-            this.links = metaObject.flatMap(meta -> Lang.tryCast(meta.get("links"), JsonObject.class))
+            this.links = metaObject.flatMap(meta -> tryCast(meta.get("links"), JsonObject.class))
                     .map(linksObject -> {
                         Map<String, String> converted = new LinkedHashMap<>();
                         linksObject.entrySet().forEach(
-                                entry -> Lang.tryCast(entry.getValue(), JsonPrimitive.class).ifPresent(element -> {
+                                entry -> tryCast(entry.getValue(), JsonPrimitive.class).ifPresent(element -> {
                                     converted.put(entry.getKey(), element.getAsString());
                                 }));
                         return converted;
@@ -254,7 +224,7 @@ public class AuthlibInjectorServer implements Observable {
                 try {
                     instance.setMetadataResponse(jsonObj.get("metadataResponse").getAsString(), jsonObj.get("metadataTimestamp").getAsLong());
                 } catch (JsonParseException e) {
-                    Logging.LOG.log(Level.WARNING, "Ignoring malformed metadata response cache: " + jsonObj.get("metadataResponse"), e);
+                    LOG.log(Level.WARNING, "Ignoring malformed metadata response cache: " + jsonObj.get("metadataResponse"), e);
                 }
             }
             return instance;
