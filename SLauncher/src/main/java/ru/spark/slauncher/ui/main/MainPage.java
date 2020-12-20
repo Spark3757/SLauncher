@@ -2,11 +2,19 @@ package ru.spark.slauncher.ui.main;
 
 import com.jfoenix.controls.JFXButton;
 import com.jfoenix.controls.JFXPopup;
+
+import java.util.List;
+import java.util.stream.IntStream;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.*;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -36,9 +44,6 @@ import ru.spark.slauncher.upgrade.UpdateHandler;
 import ru.spark.slauncher.util.Analytics;
 import ru.spark.slauncher.util.i18n.I18n;
 import ru.spark.slauncher.util.javafx.MappedObservableList;
-
-import java.util.List;
-import java.util.stream.IntStream;
 
 import static ru.spark.slauncher.ui.FXUtils.SINE;
 
@@ -228,36 +233,36 @@ public final class MainPage extends StackPane implements DecoratorPage {
         return currentGame.get();
     }
 
-    public StringProperty currentGameProperty() {
-        return currentGame;
-    }
-
     public void setCurrentGame(String currentGame) {
         this.currentGame.set(currentGame);
+    }
+
+    public StringProperty currentGameProperty() {
+        return currentGame;
     }
 
     public boolean isShowUpdate() {
         return showUpdate.get();
     }
 
-    public BooleanProperty showUpdateProperty() {
-        return showUpdate;
-    }
-
     public void setShowUpdate(boolean showUpdate) {
         this.showUpdate.set(showUpdate);
+    }
+
+    public BooleanProperty showUpdateProperty() {
+        return showUpdate;
     }
 
     public String getLatestVersion() {
         return latestVersion.get();
     }
 
-    public StringProperty latestVersionProperty() {
-        return latestVersion;
-    }
-
     public void setLatestVersion(String latestVersion) {
         this.latestVersion.set(latestVersion);
+    }
+
+    public StringProperty latestVersionProperty() {
+        return latestVersion;
     }
 
     public void initVersions(Profile profile, List<Version> versions) {

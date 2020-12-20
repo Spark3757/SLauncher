@@ -1,5 +1,11 @@
 package ru.spark.slauncher.ui.main;
 
+import java.io.File;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.SkinBase;
@@ -37,27 +43,22 @@ import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.javafx.BindingMapping;
 import ru.spark.slauncher.util.versioning.VersionNumber;
 
-import java.io.File;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import static ru.spark.slauncher.ui.FXUtils.newImage;
 import static ru.spark.slauncher.ui.FXUtils.runInFX;
 
 public class RootPage extends DecoratorTabPage {
-    private MainPage mainPage = null;
-    private SettingsPage settingsPage = null;
-    private GameList gameListPage = null;
-    private AccountList accountListPage = null;
-    private ProfileList profileListPage = null;
-
     private final TabHeader.Tab mainTab = new TabHeader.Tab("main");
     private final TabHeader.Tab settingsTab = new TabHeader.Tab("settings");
     private final TabHeader.Tab gameTab = new TabHeader.Tab("game");
     private final TabHeader.Tab accountTab = new TabHeader.Tab("account");
     private final TabHeader.Tab profileTab = new TabHeader.Tab("profile");
+    private MainPage mainPage = null;
+    private SettingsPage settingsPage = null;
+    private GameList gameListPage = null;
+    private AccountList accountListPage = null;
+    private ProfileList profileListPage = null;
+    private boolean checkedAccont = false;
+    private boolean checkedModpack = false;
 
     public RootPage() {
         setLeftPaneWidth(200);
@@ -184,12 +185,50 @@ public class RootPage extends DecoratorTabPage {
         return profileTab;
     }
 
+    // ==== Accounts ====
+
     private void selectPage(TabControl.Tab tab) {
         if (getSelectionModel().getSelectedItem() == tab) {
             getSelectionModel().select(getMainTab());
         } else {
             getSelectionModel().select(tab);
         }
+    }
+
+    public void checkAccount() {
+        if (checkedAccont) return;
+        checkedAccont = true;
+        if (Accounts.getAccounts().isEmpty())
+            Platform.runLater(this::addNewAccount);
+    }
+
+    private void addNewAccount() {
+        Controllers.dialog(new AddAccountPane());
+    }
+    // ====
+
+    private void onRefreshedVersions(SLGameRepository repository) {
+        runInFX(() -> {
+            if (!checkedModpack) {
+                checkedModpack = true;
+
+                if (repository.getVersionCount() == 0) {
+                    File modpackFile = new File("modpack.zip").getAbsoluteFile();
+                    if (modpackFile.exists()) {
+                        Task.supplyAsync(() -> CompressingUtils.findSuitableEncoding(modpackFile.toPath()))
+                                .thenApplyAsync(encoding -> ModpackHelper.readModpackManifest(modpackFile.toPath(), encoding))
+                                .thenApplyAsync(modpack -> ModpackHelper.getInstallTask(repository.getProfile(), modpackFile, modpack.getName(), modpack)
+                                        .withRunAsync(Schedulers.javafx(), this::checkAccount).executor())
+                                .thenAcceptAsync(Schedulers.javafx(), executor -> {
+                                    Controllers.taskDialog(executor, I18n.i18n("modpack.installing"));
+                                    executor.start();
+                                }).start();
+                    }
+                }
+            }
+
+            checkAccount();
+        });
     }
 
     private static class Skin extends SkinBase<RootPage> {
@@ -263,47 +302,5 @@ public class RootPage extends DecoratorTabPage {
             getChildren().setAll(root);
         }
 
-    }
-
-    // ==== Accounts ====
-
-    private boolean checkedAccont = false;
-
-    public void checkAccount() {
-        if (checkedAccont) return;
-        checkedAccont = true;
-        if (Accounts.getAccounts().isEmpty())
-            Platform.runLater(this::addNewAccount);
-    }
-
-    private void addNewAccount() {
-        Controllers.dialog(new AddAccountPane());
-    }
-    // ====
-
-    private boolean checkedModpack = false;
-
-    private void onRefreshedVersions(SLGameRepository repository) {
-        runInFX(() -> {
-            if (!checkedModpack) {
-                checkedModpack = true;
-
-                if (repository.getVersionCount() == 0) {
-                    File modpackFile = new File("modpack.zip").getAbsoluteFile();
-                    if (modpackFile.exists()) {
-                        Task.supplyAsync(() -> CompressingUtils.findSuitableEncoding(modpackFile.toPath()))
-                                .thenApplyAsync(encoding -> ModpackHelper.readModpackManifest(modpackFile.toPath(), encoding))
-                                .thenApplyAsync(modpack -> ModpackHelper.getInstallTask(repository.getProfile(), modpackFile, modpack.getName(), modpack)
-                                        .withRunAsync(Schedulers.javafx(), this::checkAccount).executor())
-                                .thenAcceptAsync(Schedulers.javafx(), executor -> {
-                                    Controllers.taskDialog(executor, I18n.i18n("modpack.installing"));
-                                    executor.start();
-                                }).start();
-                    }
-                }
-            }
-
-            checkAccount();
-        });
     }
 }

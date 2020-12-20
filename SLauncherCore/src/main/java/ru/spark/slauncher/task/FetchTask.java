@@ -22,7 +22,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,7 +41,7 @@ public abstract class FetchTask<T> extends Task<T> {
         this.urls = new ArrayList<>(urls);
         this.retry = retry;
 
-        setExecutor(Schedulers.io());
+        setExecutor(download());
     }
 
     public void setCaching(boolean caching) {
@@ -276,7 +276,7 @@ public abstract class FetchTask<T> extends Task<T> {
         if (DOWNLOAD_EXECUTOR == null) {
             synchronized (Schedulers.class) {
                 if (DOWNLOAD_EXECUTOR == null) {
-                    DOWNLOAD_EXECUTOR = new ThreadPoolExecutor(0, downloadExecutorConcurrency, 10, TimeUnit.SECONDS, new SynchronousQueue<>(),
+                    DOWNLOAD_EXECUTOR = new ThreadPoolExecutor(0, downloadExecutorConcurrency, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
                             runnable -> {
                                 Thread thread = Executors.defaultThreadFactory().newThread(runnable);
                                 thread.setDaemon(true);

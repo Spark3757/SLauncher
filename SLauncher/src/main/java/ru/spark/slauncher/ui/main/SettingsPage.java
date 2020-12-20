@@ -2,6 +2,20 @@ package ru.spark.slauncher.ui.main;
 
 import com.jfoenix.controls.JFXColorPicker;
 import com.jfoenix.effects.JFXDepthManager;
+
+import java.awt.*;
+import java.io.File;
+import java.io.IOException;
+import java.net.Proxy;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.logging.Level;
+
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.WeakInvalidationListener;
@@ -13,7 +27,12 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import ru.spark.slauncher.Metadata;
-import ru.spark.slauncher.setting.*;
+import ru.spark.slauncher.setting.ConfigHolder;
+import ru.spark.slauncher.setting.DownloadProviders;
+import ru.spark.slauncher.setting.EnumBackgroundImage;
+import ru.spark.slauncher.setting.EnumCommonDirectory;
+import ru.spark.slauncher.setting.Settings;
+import ru.spark.slauncher.setting.Theme;
 import ru.spark.slauncher.ui.Controllers;
 import ru.spark.slauncher.ui.FXUtils;
 import ru.spark.slauncher.ui.construct.MessageDialogPane;
@@ -30,19 +49,6 @@ import ru.spark.slauncher.util.i18n.Locales;
 import ru.spark.slauncher.util.io.FileUtils;
 import ru.spark.slauncher.util.javafx.ExtendedProperties;
 import ru.spark.slauncher.util.javafx.SafeStringConverter;
-
-import java.awt.*;
-import java.io.File;
-import java.io.IOException;
-import java.net.Proxy;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.Optional;
-import java.util.logging.Level;
 
 public final class SettingsPage extends SettingsView implements DecoratorPage {
     private final ReadOnlyObjectWrapper<State> state = new ReadOnlyObjectWrapper<>(State.fromTitle(I18n.i18n("settings.launcher")));
