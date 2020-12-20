@@ -25,7 +25,9 @@ public final class NetworkUtils {
             if (param.getValue() == null)
                 continue;
             if (first) {
-                sb.append('?');
+                if (!baseUrl.isEmpty()) {
+                    sb.append('?');
+                }
                 first = false;
             } else {
                 sb.append('&');
@@ -51,9 +53,9 @@ public final class NetworkUtils {
     }
 
     /**
+     * @see <a href="https://github.com/curl/curl/blob/3f7b1bb89f92c13e69ee51b710ac54f775aab320/lib/transfer.c#L1427-L1461">Curl</a>
      * @param location the url to be URL encoded
      * @return encoded URL
-     * @see <a href="https://github.com/curl/curl/blob/3f7b1bb89f92c13e69ee51b710ac54f775aab320/lib/transfer.c#L1427-L1461">Curl</a>
      */
     public static String encodeLocation(String location) {
         StringBuilder sb = new StringBuilder();
@@ -80,11 +82,10 @@ public final class NetworkUtils {
 
     /**
      * This method is a work-around that aims to solve problem when "Location" in stupid server's response is not encoded.
-     *
+     * @see <a href="https://github.com/curl/curl/issues/473">Issue with libcurl</a>
      * @param conn the stupid http connection.
      * @return manually redirected http connection.
      * @throws IOException if an I/O error occurs.
-     * @see <a href="https://github.com/curl/curl/issues/473">Issue with libcurl</a>
      */
     public static HttpURLConnection resolveConnection(HttpURLConnection conn) throws IOException {
         int redirect = 0;

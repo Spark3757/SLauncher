@@ -6,9 +6,8 @@ import ru.spark.slauncher.util.Immutable;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
 import ru.spark.slauncher.util.gson.Validation;
 
+import java.util.Objects;
 import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author spark1337
@@ -22,8 +21,8 @@ public class GameProfile implements Validation {
     private final String name;
 
     public GameProfile(UUID id, String name) {
-        this.id = requireNonNull(id);
-        this.name = requireNonNull(name);
+        this.id = Objects.requireNonNull(id);
+        this.name = Objects.requireNonNull(name);
     }
 
     public UUID getId() {
@@ -36,9 +35,7 @@ public class GameProfile implements Validation {
 
     @Override
     public void validate() throws JsonParseException {
-        if (id == null)
-            throw new JsonParseException("Game profile id cannot be null");
-        if (name == null)
-            throw new JsonParseException("Game profile name cannot be null");
+        Validation.requireNonNull(id, "Game profile id cannot be null");
+        Validation.requireNonNull(name, "Game profile name cannot be null");
     }
 }

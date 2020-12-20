@@ -4,6 +4,8 @@ import ru.spark.slauncher.auth.AuthInfo;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.CharacterSelector;
 import ru.spark.slauncher.auth.ServerDisconnectException;
+import ru.spark.slauncher.auth.yggdrasil.CompleteGameProfile;
+import ru.spark.slauncher.auth.yggdrasil.TextureType;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilAccount;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilSession;
 import ru.spark.slauncher.game.Arguments;
@@ -12,14 +14,18 @@ import ru.spark.slauncher.util.function.ExceptionalSupplier;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Collections.emptySet;
+import static java.util.Collections.unmodifiableSet;
 
 public class AuthlibInjectorAccount extends YggdrasilAccount {
     private final AuthlibInjectorServer server;
@@ -142,5 +148,22 @@ public class AuthlibInjectorAccount extends YggdrasilAccount {
                 .append("username", getUsername())
                 .append("server", getServer().getUrl())
                 .toString();
+    }
+    public static Set<TextureType> getUploadableTextures(CompleteGameProfile profile) {
+        String prop = profile.getProperties().get("uploadableTextures");
+        if (prop == null)
+            return emptySet();
+        Set<TextureType> result = EnumSet.noneOf(TextureType.class);
+        for (String val : prop.split(",")) {
+            val = val.toUpperCase();
+            TextureType parsed;
+            try {
+                parsed = TextureType.valueOf(val);
+            } catch (IllegalArgumentException e) {
+                continue;
+            }
+            result.add(parsed);
+        }
+        return unmodifiableSet(result);
     }
 }

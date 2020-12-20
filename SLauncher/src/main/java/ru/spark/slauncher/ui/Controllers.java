@@ -15,6 +15,7 @@ import ru.spark.slauncher.setting.EnumCommonDirectory;
 import ru.spark.slauncher.task.Task;
 import ru.spark.slauncher.task.TaskExecutor;
 import ru.spark.slauncher.ui.account.AuthlibInjectorServersPage;
+import ru.spark.slauncher.ui.account.MicrosoftAccountLoginStage;
 import ru.spark.slauncher.ui.animation.ContainerAnimations;
 import ru.spark.slauncher.ui.construct.InputDialogPane;
 import ru.spark.slauncher.ui.construct.MessageDialogPane;
@@ -89,6 +90,7 @@ public final class Controllers {
         Logging.LOG.info("Start initializing application");
 
         Controllers.stage = stage;
+        MicrosoftAccountLoginStage.INSTANCE.initOwner(stage);
 
         stage.setHeight(ConfigHolder.config().getHeight());
         stageHeight.bind(stage.heightProperty());

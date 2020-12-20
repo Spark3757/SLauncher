@@ -1,19 +1,28 @@
 package ru.spark.slauncher.ui;
 
 import javafx.scene.Scene;
+import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import ru.spark.slauncher.setting.ConfigHolder;
 
+import static ru.spark.slauncher.setting.ConfigHolder.config;
 import static ru.spark.slauncher.ui.FXUtils.newImage;
 
 public class WebStage extends Stage {
-    private final WebView webView = new WebView();
+    protected final WebView webView = new WebView();
+    protected final WebEngine webEngine = webView.getEngine();
 
     public WebStage() {
-        setScene(new Scene(webView, 800, 480));
-        getScene().getStylesheets().addAll(ConfigHolder.config().getTheme().getStylesheets());
+        this(800, 480);
+    }
+
+    public WebStage(int width, int height) {
+        setScene(new Scene(webView, width, height));
+        getScene().getStylesheets().addAll(config().getTheme().getStylesheets());
         getIcons().add(newImage("/assets/img/icon.png"));
+        webView.setContextMenuEnabled(false);
+        titleProperty().bind(webEngine.titleProperty());
     }
 
     public WebView getWebView() {

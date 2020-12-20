@@ -17,7 +17,7 @@ public class YggdrasilAccountFactory extends AccountFactory<YggdrasilAccount> {
 
     public static final YggdrasilAccountFactory MOJANG = new YggdrasilAccountFactory(YggdrasilService.MOJANG);
 
-    private YggdrasilService service;
+    private final YggdrasilService service;
 
     public YggdrasilAccountFactory(YggdrasilService service) {
         this.service = service;
@@ -52,5 +52,10 @@ public class YggdrasilAccountFactory extends AccountFactory<YggdrasilAccount> {
                 });
 
         return new YggdrasilAccount(service, username, session);
+    }
+
+    @Override
+    public AccountLoginType getLoginType() {
+        return AccountLoginType.USERNAME_PASSWORD;
     }
 }

@@ -43,4 +43,9 @@ public class OfflineAccountFactory extends AccountFactory<OfflineAccount> {
         return UUID.nameUUIDFromBytes(("OfflinePlayer:" + username).getBytes(UTF_8));
     }
 
+    @Override
+    public AccountLoginType getLoginType() {
+        return AccountLoginType.USERNAME;
+    }
+
 }

@@ -62,4 +62,9 @@ public class AuthlibInjectorAccountFactory extends AccountFactory<AuthlibInjecto
 
         return new AuthlibInjectorAccount(server, downloader, username, session);
     }
+
+    @Override
+    public AccountLoginType getLoginType() {
+        return AccountLoginType.USERNAME_PASSWORD;
+    }
 }

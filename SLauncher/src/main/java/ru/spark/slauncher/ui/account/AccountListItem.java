@@ -1,11 +1,13 @@
 package ru.spark.slauncher.ui.account;
 
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.binding.StringBinding;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.Skin;
 import javafx.scene.image.Image;
@@ -16,6 +18,8 @@ import ru.spark.slauncher.auth.CredentialExpiredException;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorAccount;
 import ru.spark.slauncher.auth.authlibinjector.AuthlibInjectorServer;
 import ru.spark.slauncher.auth.offline.OfflineAccount;
+import ru.spark.slauncher.auth.yggdrasil.CompleteGameProfile;
+import ru.spark.slauncher.auth.yggdrasil.TextureType;
 import ru.spark.slauncher.auth.yggdrasil.YggdrasilAccount;
 import ru.spark.slauncher.game.TexturesLoader;
 import ru.spark.slauncher.setting.Accounts;
@@ -29,9 +33,13 @@ import ru.spark.slauncher.util.Logging;
 import ru.spark.slauncher.util.i18n.I18n;
 
 import java.io.File;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.logging.Level;
 
+import static java.util.Collections.emptySet;
+import static javafx.beans.binding.Bindings.createBooleanBinding;
 import static ru.spark.slauncher.util.Logging.LOG;
 import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
@@ -61,7 +69,9 @@ public class AccountListItem extends RadioButton {
         if (account instanceof OfflineAccount) {
             title.bind(characterName);
         } else {
-            title.bind(Bindings.concat(account.getUsername(), " - ", characterName));
+            title.bind(
+                    account.getUsername().isEmpty() ? characterName :
+                            Bindings.concat(account.getUsername(), " - ", characterName));
         }
 
         image.bind(TexturesLoader.fxAvatarBinding(account, 32));
@@ -97,8 +107,23 @@ public class AccountListItem extends RadioButton {
         refreshAsync().whenComplete(e -> {}).start();
     }
 
-    public boolean canUploadSkin() {
-        return account instanceof YggdrasilAccount && !(account instanceof AuthlibInjectorAccount);
+    public ObservableBooleanValue canUploadSkin() {
+        if (account instanceof YggdrasilAccount) {
+            if (account instanceof AuthlibInjectorAccount) {
+                AuthlibInjectorAccount aiAccount = (AuthlibInjectorAccount) account;
+                ObjectBinding<Optional<CompleteGameProfile>> profile = aiAccount.getYggdrasilService().getProfileRepository().binding(aiAccount.getUUID());
+                return createBooleanBinding(() -> {
+                    Set<TextureType> uploadableTextures = profile.get()
+                            .map(AuthlibInjectorAccount::getUploadableTextures)
+                            .orElse(emptySet());
+                    return uploadableTextures.contains(TextureType.SKIN);
+                }, profile);
+            } else {
+                return createBooleanBinding(() -> true);
+            }
+        } else {
+            return createBooleanBinding(() -> false);
+        }
     }
 
     public void uploadSkin() {

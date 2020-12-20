@@ -5,9 +5,8 @@ import com.google.gson.annotations.JsonAdapter;
 import ru.spark.slauncher.util.Immutable;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * @author spark1337
@@ -20,7 +19,7 @@ public class CompleteGameProfile extends GameProfile {
 
     public CompleteGameProfile(UUID id, String name, Map<String, String> properties) {
         super(id, name);
-        this.properties = requireNonNull(properties);
+        this.properties = Objects.requireNonNull(properties);
     }
 
     public CompleteGameProfile(GameProfile profile, Map<String, String> properties) {

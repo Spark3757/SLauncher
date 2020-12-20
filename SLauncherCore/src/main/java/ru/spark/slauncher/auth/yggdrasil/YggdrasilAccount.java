@@ -189,6 +189,7 @@ public class YggdrasilAccount extends Account {
 
     @Override
     public boolean equals(Object obj) {
+        if (this == obj) return true;
         if (obj == null || obj.getClass() != YggdrasilAccount.class)
             return false;
         YggdrasilAccount another = (YggdrasilAccount) obj;
