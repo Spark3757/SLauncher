@@ -1,6 +1,7 @@
 plugins {
     id 'com.github.johnrengelman.shadow' version '4.0.0'
     id 'application'
+    id "edu.sc.seis.macAppBundle" version "2.3.0"
 }
 
 
@@ -75,7 +76,7 @@ def repack(File file) {
 
 jar {
     manifest {
-        attributes 'Created-By': 'Copyright(c) 2018-2020 spark1337.',
+        attributes 'Created-By': 'Copyright(c) 2017-2020 spark1337.',
                 'Main-Class': mainClassName,
                 'Multi-Release': 'true',
                 'Implementation-Version': version,
@@ -124,6 +125,7 @@ def createExecutable(String suffix, String header) {
     output.bytes = new File(project.projectDir, header).bytes
     output << jar.archivePath.bytes
     createChecksum(output)
+
 }
 
 processResources {
@@ -169,6 +171,11 @@ task makePackGz(dependsOn: makePack) doLast {
 
 task makeExecutables(dependsOn: jar) doLast {
     createExecutable("exe", "src/main/resources/assets/SLauncher.exe")
+}
+
+macAppBundle {
+    mainClassName = 'ru.spark.slauncher.Main'
+    icon = "icon.icns"
 }
 
 build.dependsOn makePackXz

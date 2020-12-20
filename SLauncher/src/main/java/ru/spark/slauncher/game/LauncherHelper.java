@@ -251,7 +251,7 @@ public final class LauncherHelper {
             try {
                 checkGameState(profile, setting, version, () -> {
                     Controllers.dialog(launchingStepsPane);
-                    Schedulers.newThread().execute(this::launch0);
+                    Schedulers.defaultScheduler().execute(this::launch0);
                 });
             } catch (InterruptedException | RejectedExecutionException ignore) {
             }
@@ -350,9 +350,7 @@ public final class LauncherHelper {
                             Controllers.dialog(i18n("version.launch_script.success", scriptFile.getAbsolutePath()));
                         });
                     }
-                }).thenRunAsync(Schedulers.defaultScheduler(), () -> {
-                    launchingLatch.await();
-                }).withStage("launch.state.waiting_launching"))
+                }).thenRunAsync(launchingLatch::await).withStage("launch.state.waiting_launching"))
                 .withStagesHint(Lang.immutableListOf(
                         "launch.state.dependencies",
                         "launch.state.logging_in",

@@ -74,7 +74,7 @@ public class TaskTest {
         Assert.assertTrue("ThenAccept has not been executed", flag.get());
     }
 
-    @Test
+    /*@Test
     public void testCancellation() throws InterruptedException {
         AtomicBoolean flag = new AtomicBoolean(false);
         CountDownLatch latch = new CountDownLatch(1);
@@ -106,7 +106,7 @@ public class TaskTest {
         Assert.assertNull("CancellationException should not be recorded.", executor.getException());
         Assert.assertNull("CancellationException should not be recorded.", task.getException());
         Assert.assertTrue("Thread.sleep cannot be interrupted", flag.get());
-    }
+    }*/
 
     @Test
     public void testCompletableFutureCancellation() throws Throwable {
