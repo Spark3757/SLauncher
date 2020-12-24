@@ -24,7 +24,7 @@ public final class DownloadProviders {
 
     static {
         String bmclapiRoot = "https://bmclapi2.bangbang93.com";
-        String bmclapiRootOverride = System.getProperty("hmcl.bmclapi.override");
+        String bmclapiRootOverride = System.getProperty("slauncher.bmclapi.override");
         if (bmclapiRootOverride != null) bmclapiRoot = bmclapiRootOverride;
 
         providersById = mapOf(

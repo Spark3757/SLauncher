@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public final class UUIDTypeAdapter extends TypeAdapter<UUID> {
 

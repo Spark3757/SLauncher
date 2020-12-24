@@ -16,7 +16,7 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public class OfflineAccount extends Account {
 

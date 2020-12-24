@@ -7,7 +7,7 @@ import ru.spark.slauncher.download.liteloader.LiteLoaderBMCLVersionList;
 import ru.spark.slauncher.download.optifine.OptiFineBMCLVersionList;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public class BMCLAPIDownloadProvider implements DownloadProvider {
     private final String apiRoot;

@@ -106,13 +106,13 @@ public class MaintainTask extends Task<Version> {
         if (!libraryAnalyzer.has(FORGE)) return version;
 
         if (libraryAnalyzer.has(OPTIFINE)) {
-            Library hmclTransformerDiscoveryService = new Library(new Artifact("ru.spark.slauncher", "transformer-discovery-service", "1.0"));
+            Library slauncherTransformerDiscoveryService = new Library(new Artifact("ru.spark.slauncher", "transformer-discovery-service", "1.0"));
             Optional<Library> optiFine = version.getLibraries().stream().filter(library -> library.is("optifine", "OptiFine")).findAny();
             boolean libraryExisting = version.getLibraries().stream().anyMatch(library -> library.is("ru.spark.slauncher", "transformer-discovery-service"));
             optiFine.ifPresent(library -> {
                 builder.addJvmArgument("-Dslauncher.transformer.candidates=${libraries_directory}/" + library.getPath());
-                if (!libraryExisting) builder.addLibrary(hmclTransformerDiscoveryService);
-                Path libraryPath = repository.getLibraryFile(version, hmclTransformerDiscoveryService).toPath();
+                if (!libraryExisting) builder.addLibrary(slauncherTransformerDiscoveryService);
+                Path libraryPath = repository.getLibraryFile(version, slauncherTransformerDiscoveryService).toPath();
                 try {
                     Files.createDirectories(libraryPath.getParent());
                     Files.copy(MaintainTask.class.getResourceAsStream("/assets/game/SLauncherTransformerDiscoveryService-1.0.jar"),

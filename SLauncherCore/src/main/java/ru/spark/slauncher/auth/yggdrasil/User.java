@@ -10,7 +10,7 @@ import ru.spark.slauncher.util.gson.Validation;
 import java.util.Map;
 
 /**
- * @author huang
+ * @author spark1337
  */
 @Immutable
 public final class User implements Validation {

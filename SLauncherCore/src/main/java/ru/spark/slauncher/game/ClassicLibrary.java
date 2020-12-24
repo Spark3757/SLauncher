@@ -1,7 +1,7 @@
 package ru.spark.slauncher.game;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public class ClassicLibrary {
 

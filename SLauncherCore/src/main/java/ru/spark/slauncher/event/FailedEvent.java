@@ -1,7 +1,7 @@
 package ru.spark.slauncher.event;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public class FailedEvent<T> extends Event {
 

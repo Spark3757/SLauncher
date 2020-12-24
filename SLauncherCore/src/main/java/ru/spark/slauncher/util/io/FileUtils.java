@@ -18,7 +18,7 @@ import java.util.function.Predicate;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public final class FileUtils {
 

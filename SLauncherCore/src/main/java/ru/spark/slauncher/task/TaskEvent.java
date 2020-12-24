@@ -3,7 +3,7 @@ package ru.spark.slauncher.task;
 import ru.spark.slauncher.event.Event;
 
 /**
- * @author huang
+ * @author spark1337
  */
 public class TaskEvent extends Event {
 
