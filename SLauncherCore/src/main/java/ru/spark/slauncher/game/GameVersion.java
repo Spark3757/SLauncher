@@ -17,10 +17,13 @@ import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import static ru.spark.slauncher.util.Lang.tryCast;
 
 /**
  * @author spark1337
@@ -28,8 +31,8 @@ import java.util.stream.StreamSupport;
 public final class GameVersion {
     private static Optional<String> getVersionFromJson(Path versionJson) {
         try {
-            MinecraftVersion version = JsonUtils.fromNonNullJson(FileUtils.readText(versionJson), MinecraftVersion.class);
-            return Optional.ofNullable(version.name);
+            Map<?, ?> version = JsonUtils.fromNonNullJson(FileUtils.readText(versionJson), Map.class);
+            return tryCast(version.get("name"), String.class);
         } catch (IOException | JsonParseException e) {
             Logging.LOG.log(Level.WARNING, "Failed to parse version.json", e);
             return Optional.empty();

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -276,12 +277,15 @@ public abstract class FetchTask<T> extends Task<T> {
         if (DOWNLOAD_EXECUTOR == null) {
             synchronized (Schedulers.class) {
                 if (DOWNLOAD_EXECUTOR == null) {
-                    DOWNLOAD_EXECUTOR = new ThreadPoolExecutor(0, downloadExecutorConcurrency, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
+                    ThreadPoolExecutor executor = new ThreadPoolExecutor(downloadExecutorConcurrency, downloadExecutorConcurrency, 10, TimeUnit.SECONDS,
+                            new ArrayBlockingQueue<>(downloadExecutorConcurrency),
                             runnable -> {
                                 Thread thread = Executors.defaultThreadFactory().newThread(runnable);
                                 thread.setDaemon(true);
                                 return thread;
                             });
+                    executor.allowCoreThreadTimeOut(true);
+                    DOWNLOAD_EXECUTOR = executor;
                 }
             }
         }
