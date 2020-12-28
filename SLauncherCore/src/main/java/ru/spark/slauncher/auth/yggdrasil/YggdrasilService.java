@@ -34,7 +34,7 @@ import static java.util.Collections.unmodifiableList;
 
 public class YggdrasilService {
 
-    private static final ThreadPoolExecutor POOL = Lang.threadPool("ProfileProperties", true, 2, 10, TimeUnit.SECONDS);
+    private static final ThreadPoolExecutor POOL = Lang.threadPool("YggdrasilProfileProperties", true, 2, 10, TimeUnit.SECONDS);
 
     public static final YggdrasilService MOJANG = new YggdrasilService(new MojangYggdrasilProvider());
 

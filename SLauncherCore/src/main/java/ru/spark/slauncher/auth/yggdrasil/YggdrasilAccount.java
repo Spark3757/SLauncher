@@ -3,14 +3,17 @@ package ru.spark.slauncher.auth.yggdrasil;
 import javafx.beans.binding.ObjectBinding;
 import ru.spark.slauncher.auth.*;
 import ru.spark.slauncher.util.gson.UUIDTypeAdapter;
+import ru.spark.slauncher.util.javafx.BindingMapping;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
 
 import static java.util.Objects.requireNonNull;
+import static ru.spark.slauncher.util.Logging.LOG;
 
 public class YggdrasilAccount extends Account {
 
@@ -161,6 +164,20 @@ public class YggdrasilAccount extends Account {
 
     public YggdrasilService getYggdrasilService() {
         return service;
+    }
+
+    @Override
+    public ObjectBinding<Optional<Map<TextureType, Texture>>> getTextures() {
+        return BindingMapping.of(service.getProfileRepository().binding(getUUID()))
+                .map(profile -> profile.flatMap(it -> {
+                    try {
+                        return YggdrasilService.getTextures(it);
+                    } catch (ServerResponseMalformedException e) {
+                        LOG.log(Level.WARNING, "Failed to parse texture payload", e);
+                        return Optional.empty();
+                    }
+                }));
+
     }
 
     @Override

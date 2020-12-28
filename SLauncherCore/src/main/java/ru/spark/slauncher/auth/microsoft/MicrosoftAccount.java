@@ -4,10 +4,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import javafx.beans.binding.ObjectBinding;
 import ru.spark.slauncher.auth.Account;
 import ru.spark.slauncher.auth.AuthInfo;
 import ru.spark.slauncher.auth.AuthenticationException;
 import ru.spark.slauncher.auth.CharacterSelector;
+import ru.spark.slauncher.auth.yggdrasil.Texture;
+import ru.spark.slauncher.auth.yggdrasil.TextureType;
+import ru.spark.slauncher.util.javafx.BindingMapping;
 
 import static java.util.Objects.requireNonNull;
 
@@ -93,6 +97,13 @@ public class MicrosoftAccount extends Account {
 
     public MicrosoftService getService() {
         return service;
+    }
+
+    @Override
+    public ObjectBinding<Optional<Map<TextureType, Texture>>> getTextures() {
+        return BindingMapping.of(service.getProfileRepository().binding(session.getAuthorization()))
+                .map(profile -> profile.flatMap(MicrosoftService::getTextures));
+
     }
 
     @Override

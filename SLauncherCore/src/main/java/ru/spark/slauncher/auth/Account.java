@@ -3,6 +3,10 @@ package ru.spark.slauncher.auth;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.ObjectBinding;
+import ru.spark.slauncher.auth.yggdrasil.Texture;
+import ru.spark.slauncher.auth.yggdrasil.TextureType;
 import ru.spark.slauncher.util.ToStringBuilder;
 import ru.spark.slauncher.util.javafx.ObservableHelper;
 
@@ -72,6 +76,10 @@ public abstract class Account implements Observable {
      */
     protected void invalidate() {
         Platform.runLater(helper::invalidate);
+    }
+
+    public ObjectBinding<Optional<Map<TextureType, Texture>>> getTextures() {
+        return Bindings.createObjectBinding(Optional::empty);
     }
 
     @Override

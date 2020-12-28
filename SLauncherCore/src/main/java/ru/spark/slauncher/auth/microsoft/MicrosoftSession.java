@@ -32,6 +32,10 @@ public class MicrosoftSession {
         return accessToken;
     }
 
+    public String getAuthorization() {
+        return String.format("%s %s", getTokenType(), getAccessToken());
+    }
+
     public User getUser() {
         return user;
     }
