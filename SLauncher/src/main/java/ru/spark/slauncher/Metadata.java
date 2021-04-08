@@ -3,6 +3,7 @@ package ru.spark.slauncher;
 import ru.spark.slauncher.util.platform.OperatingSystem;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Stores metadata about this application.
@@ -17,8 +18,17 @@ public final class Metadata {
     public static final String CHANGELOG_URL = "http://update.slauncher.ru/changelog";
     public static final String PUBLISH_URL = "http://slauncher.ru/";
     public static final Path MINECRAFT_DIRECTORY = OperatingSystem.getWorkingDirectory("minecraft");
-    public static final Path SL_DIRECTORY = OperatingSystem.getWorkingDirectory("SLauncher");
+    public static final Path SL_DIRECTORY = getSLDirectory();
 
     private Metadata() {
+    }
+
+    private static Path getSLDirectory() {
+        String home = System.getProperty("user.home", ".");
+        if (OperatingSystem.CURRENT_OS == OperatingSystem.LINUX) {
+            // to fulfill XDG standard.
+            return Paths.get(home, ".cache", "SLauncher");
+        }
+        return OperatingSystem.getWorkingDirectory("SLauncher");
     }
 }

@@ -5,6 +5,7 @@ import com.jfoenix.controls.JFXDialogLayout;
 import javafx.scene.control.Label;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
+import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.setting.ConfigHolder;
 import ru.spark.slauncher.ui.construct.DialogCloseEvent;
 import ru.spark.slauncher.util.i18n.I18n;
@@ -22,6 +23,7 @@ public class UpgradeDialog extends JFXDialogLayout {
         {
             WebView webView = new WebView();
             WebEngine engine = webView.getEngine();
+            webView.getEngine().setUserDataDirectory(Metadata.SL_DIRECTORY.toFile());
             engine.load(CHANGELOG_URL + ConfigHolder.config().getUpdateChannel().channelName);
             engine.getLoadWorker().stateProperty().addListener((observable, oldValue, newValue) -> {
                 String url = engine.getLoadWorker().getMessage().trim();

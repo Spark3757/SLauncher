@@ -8,6 +8,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import ru.spark.slauncher.Metadata;
 import ru.spark.slauncher.setting.ConfigHolder;
 
 import static ru.spark.slauncher.setting.ConfigHolder.config;
@@ -27,6 +28,7 @@ public class WebStage extends Stage {
         setScene(new Scene(pane, width, height));
         getScene().getStylesheets().addAll(config().getTheme().getStylesheets());
         getIcons().add(newImage("/assets/img/icon.png"));
+        webView.getEngine().setUserDataDirectory(Metadata.SL_DIRECTORY.toFile());
         webView.setContextMenuEnabled(false);
         titleProperty().bind(webEngine.titleProperty());
 
