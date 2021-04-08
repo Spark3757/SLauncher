@@ -201,7 +201,7 @@ public class YggdrasilService {
                 response.accessToken,
                 response.selectedProfile,
                 response.availableProfiles == null ? null : unmodifiableList(response.availableProfiles),
-                response.user);
+                response.user == null ? null : response.user.getProperties());
     }
 
     private static void requireEmpty(String response) throws AuthenticationException {
