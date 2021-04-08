@@ -76,7 +76,7 @@ def repack(File file) {
 
 jar {
     manifest {
-        attributes 'Created-By': 'Copyright(c) 2017-2020 spark1337.',
+        attributes 'Created-By': 'Copyright(c) 2017-2021 spark1337.',
                 'Main-Class': mainClassName,
                 'Multi-Release': 'true',
                 'Implementation-Version': version,

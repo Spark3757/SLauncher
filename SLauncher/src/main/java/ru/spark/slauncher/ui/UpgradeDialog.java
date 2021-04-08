@@ -21,7 +21,6 @@ public class UpgradeDialog extends JFXDialogLayout {
         }
 
         {
-            WebView webView = new WebView();
             WebEngine engine = webView.getEngine();
             webView.getEngine().setUserDataDirectory(Metadata.SL_DIRECTORY.toFile());
             engine.load(CHANGELOG_URL + ConfigHolder.config().getUpdateChannel().channelName);
