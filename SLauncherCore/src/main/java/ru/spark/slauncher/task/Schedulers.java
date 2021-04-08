@@ -6,6 +6,8 @@ import ru.spark.slauncher.util.Logging;
 import javax.swing.*;
 import java.util.concurrent.*;
 
+import static ru.spark.slauncher.util.Lang.threadPool;
+
 /**
  * @author spark1337
  */
@@ -29,12 +31,7 @@ public final class Schedulers {
         if (IO_EXECUTOR == null) {
             synchronized (Schedulers.class) {
                 if (IO_EXECUTOR == null) {
-                    IO_EXECUTOR = new ThreadPoolExecutor(0, 4, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<>(),
-                            runnable -> {
-                                Thread thread = Executors.defaultThreadFactory().newThread(runnable);
-                                thread.setDaemon(true);
-                                return thread;
-                            });
+                    IO_EXECUTOR = threadPool("IO", true, 4, 10, TimeUnit.SECONDS);
                 }
             }
         }

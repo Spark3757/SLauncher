@@ -98,23 +98,4 @@ public final class GameVersion {
         }
     }
 
-    private static final class MinecraftVersion {
-        public String name;
-
-        @SerializedName("release_target")
-        public String releaseTarget;
-
-        public String id;
-
-        public boolean stable;
-
-        @SerializedName("world_version")
-        public int worldVersion;
-
-        @SerializedName("protocol_version")
-        public int protocolVersion;
-
-        @SerializedName("pack_version")
-        public int packVersion;
-    }
 }

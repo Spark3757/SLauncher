@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
+import static ru.spark.slauncher.util.Lang.threadPool;
+
 public abstract class FetchTask<T> extends Task<T> {
     protected final List<URL> urls;
     protected final int retry;
@@ -277,15 +279,7 @@ public abstract class FetchTask<T> extends Task<T> {
         if (DOWNLOAD_EXECUTOR == null) {
             synchronized (Schedulers.class) {
                 if (DOWNLOAD_EXECUTOR == null) {
-                    ThreadPoolExecutor executor = new ThreadPoolExecutor(downloadExecutorConcurrency, downloadExecutorConcurrency, 10, TimeUnit.SECONDS,
-                            new ArrayBlockingQueue<>(downloadExecutorConcurrency),
-                            runnable -> {
-                                Thread thread = Executors.defaultThreadFactory().newThread(runnable);
-                                thread.setDaemon(true);
-                                return thread;
-                            });
-                    executor.allowCoreThreadTimeOut(true);
-                    DOWNLOAD_EXECUTOR = executor;
+                    DOWNLOAD_EXECUTOR = threadPool("Download", true, downloadExecutorConcurrency, 10, TimeUnit.SECONDS);
                 }
             }
         }
