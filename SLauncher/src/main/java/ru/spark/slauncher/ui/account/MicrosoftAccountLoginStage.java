@@ -9,6 +9,8 @@ import javafx.stage.Modality;
 import ru.spark.slauncher.auth.microsoft.MicrosoftService;
 import ru.spark.slauncher.ui.WebStage;
 
+import static ru.spark.slauncher.Launcher.COOKIE_MANAGER;
+
 public class MicrosoftAccountLoginStage extends WebStage implements MicrosoftService.WebViewCallback {
     public static final MicrosoftAccountLoginStage INSTANCE = new MicrosoftAccountLoginStage();
 
@@ -40,6 +42,8 @@ public class MicrosoftAccountLoginStage extends WebStage implements MicrosoftSer
     @Override
     public CompletableFuture<String> show(MicrosoftService service, Predicate<String> urlTester, String initialURL) {
         Platform.runLater(() -> {
+            COOKIE_MANAGER.getCookieStore().removeAll();
+
             webEngine.load(initialURL);
             show();
         });

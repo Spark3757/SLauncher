@@ -17,9 +17,7 @@ import ru.spark.slauncher.util.platform.OperatingSystem;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.net.URLClassLoader;
+import java.net.*;
 import java.nio.file.Paths;
 import java.util.LinkedList;
 import java.util.List;
@@ -31,6 +29,7 @@ import static ru.spark.slauncher.util.i18n.I18n.i18n;
 
 public final class Launcher extends Application {
 
+    public static final CookieManager COOKIE_MANAGER = new CookieManager();
 
     public static final CrashReporter CRASH_REPORTER = new CrashReporter();
 
@@ -102,6 +101,7 @@ public final class Launcher extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        CookieHandler.setDefault(COOKIE_MANAGER);
 
         try {
             try {

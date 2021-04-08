@@ -14,10 +14,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import ru.spark.slauncher.auth.AuthenticationException;
-import ru.spark.slauncher.auth.NoCharacterException;
-import ru.spark.slauncher.auth.ServerDisconnectException;
-import ru.spark.slauncher.auth.ServerResponseMalformedException;
+import ru.spark.slauncher.auth.*;
 import ru.spark.slauncher.auth.yggdrasil.RemoteAuthenticationException;
 import ru.spark.slauncher.auth.yggdrasil.Texture;
 import ru.spark.slauncher.auth.yggdrasil.TextureType;
@@ -123,8 +120,16 @@ public class MicrosoftService {
             }
 
             return new MicrosoftSession(minecraftResponse.tokenType, minecraftResponse.accessToken, new MicrosoftSession.User(minecraftResponse.username), null);
-        } catch (IOException | ExecutionException | InterruptedException e) {
+        } catch (IOException e) {
             throw new ServerDisconnectException(e);
+        } catch (InterruptedException e) {
+            throw new NoSelectedCharacterException();
+        } catch (ExecutionException e) {
+            if (e.getCause() instanceof InterruptedException) {
+                throw new NoSelectedCharacterException();
+            } else {
+                throw new ServerDisconnectException(e);
+            }
         } catch (JsonParseException e) {
             throw new ServerResponseMalformedException(e);
         }
